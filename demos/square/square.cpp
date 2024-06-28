@@ -1,6 +1,6 @@
 #include "square.hpp"
 
-class Test : public engine::Component {
+class Test {
     public:
         int index;
         Test(int i): index(i) {};

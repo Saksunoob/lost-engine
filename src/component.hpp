@@ -3,8 +3,6 @@
 #include <any>
 
 namespace engine {
-    class Component {};
-
     template <typename C>
     class Components {
         std::vector<std::unique_ptr<std::any>>* components;
