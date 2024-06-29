@@ -5,7 +5,7 @@
 #include <typeindex>
 
 #include "stage.hpp"
-#include "component.hpp"
+#include "components.hpp"
 
 namespace engine {
 
