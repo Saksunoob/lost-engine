@@ -1,3 +1,2 @@
 #include "../../src/engine.hpp"
-
-void testSystem();
+#include "../../src/systems.hpp"

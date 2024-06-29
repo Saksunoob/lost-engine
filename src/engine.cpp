@@ -21,9 +21,11 @@ void Engine::init(const char* title, Vector2 window_size) {
 
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    SDL_GL_SetSwapInterval(-1);
 
     // window creation
     Engine::window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_OPENGL);
@@ -59,7 +61,10 @@ void Engine::init(const char* title, Vector2 window_size) {
 void Engine::run() {
     bool quit = false;
     SDL_Event event;
+    std::thread swap_thread;
     while (!quit) {
+        glClear(GL_COLOR_BUFFER_BIT);
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
@@ -69,7 +74,10 @@ void Engine::run() {
             Logger::logError("No active scene!");
             continue;
         }
+        
         Engine::active_scene->executeStages();
+        
+        SDL_GL_SwapWindow(window);
     }
 
     SDL_Quit();

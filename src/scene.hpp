@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <typeindex>
 
+#include <SDL2/SDL.h>
+
 #include "stage.hpp"
 #include "components.hpp"
 
@@ -46,6 +48,11 @@ namespace engine {
 
             template <typename C>
             Components<C> getComponent() {
+                std::type_index type = std::type_index(typeid(C));
+                if (component_mapping.find(type) == component_mapping.end()) {
+                    Logger::logError(std::string("Getting component that doesn't exist [") + std::string(typeid(C).name()) + std::string("]"));
+                    return Components<C>(nullptr);
+                }
                 return Components<C>(&components[component_mapping[std::type_index(typeid(C))]]);
             }
     };

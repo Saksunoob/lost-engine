@@ -5,7 +5,7 @@ using namespace engine;
 
 void Scene::executeStages(){
     for (Stage stage : this->stages) {
-        stage.execute();
+        stage.execute(*this);
     }
 }
 

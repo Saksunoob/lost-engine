@@ -1,12 +1,15 @@
+#pragma once
+
 #include <unordered_map>
 #include <string>
 #include <iostream>
+#include <thread>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 
 #include "logger.hpp"
-#include "vectors.hpp"
+#include "utils.hpp"
 #include "scene.hpp"
 
 namespace engine {

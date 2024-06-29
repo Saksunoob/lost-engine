@@ -4,8 +4,10 @@
 #include "logger.hpp"
 
 namespace engine {
+    class Scene;
+
     class Stage {
-        typedef void (*System)();
+        typedef void (*System)(Scene&);
 
         std::vector<System> systems;
         
@@ -43,6 +45,6 @@ namespace engine {
             
             void addSystem(System system);
             void removeSystem(System system);
-            void execute();
+            void execute(Scene&);
     };
 }

@@ -2,9 +2,16 @@
 
 namespace engine {
     struct Vector2 {
-        double x,y;
+        float x,y;
 
-        Vector2(double x, double y) : x(x), y(y) {};
+        Vector2(float x, float y) : x(x), y(y) {};
+    };
+
+    struct IVector2 {
+        int x,y;
+
+        IVector2() : x(0), y(0) {};
+        IVector2(int x, int y): x(x), y(y) {};
     };
 
     struct Color {

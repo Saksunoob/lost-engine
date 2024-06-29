@@ -15,8 +15,8 @@ void Stage::removeSystem(System system) {
     Logger::logError("Trying to remove a system that doesn't exist!");
 }
 
-void Stage::execute() {
+void Stage::execute(Scene& scene) {
     for (System system : systems) {
-        system();
+        system(scene);
     }
 }
