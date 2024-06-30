@@ -1,70 +1,44 @@
-#include <glad.c>
-
 #include "engine.hpp"
 
 using namespace engine;
 
 std::unordered_map<std::string, Scene> Engine::scenes = std::unordered_map<std::string, Scene>();
 Scene* Engine::active_scene = nullptr;
-SDL_Window* Engine::window = nullptr;
-SDL_GLContext Engine::context = nullptr;
+IVector2 Engine::window_size = IVector2(0, 0);
+Device* Engine::device = nullptr;
+SwapChain* Engine::swap_chain = nullptr;
+std::vector<VkCommandBuffer> Engine::commandsBuffers = std::vector<VkCommandBuffer>();
+std::unique_ptr<Model> Engine::model{};
+unsigned Engine::currentImageIndex = 0;
 
-void Engine::init(const char* title, Vector2 window_size) {
-    // initialize and configure
+void Engine::init(const char* title, IVector2 window_size) {
+    Engine::window_size = window_size;
+	  // initialize and configure
     if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
         std::cout << "SDL could not initialize! SDL_Error: " << SDL_GetError();
         exit(1);
     }
-
-    SDL_GL_LoadLibrary(NULL);
-
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    SDL_GL_SetSwapInterval(-1);
-
     // window creation
-    Engine::window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_OPENGL);
+    SDL_Window* window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_VULKAN);
 
-    if (Engine::window == NULL)
+    if (window == nullptr)
     {
         std::cout << "SDL window could not initialize! SDL_Error: " << SDL_GetError();
         exit(1);
     }
-
+    Engine::device = new Device(window);
+    Engine::swap_chain = new SwapChain{getDevice(), {(unsigned)window_size.x, (unsigned)window_size.y}};
+    createCommandBuffers();
     
-    context = SDL_GL_CreateContext(window);
-
-    if (context == NULL)
-    {
-        std::cout << "Failed to create OpenGL context";
-        exit(1);
-    }
-
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD";
-        exit(1);
-    }
-
-    // Setting blending parameters
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void Engine::run() {
     bool quit = false;
     SDL_Event event;
-    std::thread swap_thread;
     while (!quit) {
-        glClear(GL_COLOR_BUFFER_BIT);
-
+        newFrame();
+        
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
@@ -72,16 +46,75 @@ void Engine::run() {
         }
         if (active_scene == nullptr) {
             Logger::logError("No active scene!");
-            continue;
+            throw;
         }
-        
         Engine::active_scene->executeStages();
-        
-        SDL_GL_SwapWindow(window);
+        drawFrame();
     }
-
     SDL_Quit();
 }
+
+void Engine::createCommandBuffers() {
+    commandsBuffers.resize(swap_chain->imageCount());
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = device->getCommandPool();
+    allocInfo.commandBufferCount = static_cast<unsigned>(commandsBuffers.size());
+
+    if (vkAllocateCommandBuffers(device->device(), &allocInfo, commandsBuffers.data()) != VK_SUCCESS) {
+        Logger::logError("Failed to allocate command buffers");
+        throw;
+    }
+}
+
+void Engine::newFrame() {
+    VkResult result = swap_chain->acquireNextImage(&currentImageIndex);
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        Logger::logError("Failed to acquire next swap chain image");
+        throw;
+    }
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandsBuffers[currentImageIndex], &beginInfo) != VK_SUCCESS) {
+        Logger::logError("Failed to begin recording command buffer!");
+        throw;
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = swap_chain->getRenderPass();
+    renderPassInfo.framebuffer = swap_chain->getFrameBuffer(currentImageIndex);
+
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swap_chain->getSwapChainExtent();
+
+    VkClearValue clearValues[2];
+    clearValues[0].color = {0.1f, 0.1f, 0.1f, 1.0f};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = clearValues;
+
+    vkCmdBeginRenderPass(commandsBuffers[currentImageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void Engine::drawFrame() {
+    vkCmdEndRenderPass(commandsBuffers[currentImageIndex]);
+    if (vkEndCommandBuffer(commandsBuffers[currentImageIndex]) != VK_SUCCESS) {
+        Logger::logError("Failed to record command buffer");
+        throw;
+    }
+
+    VkResult result = swap_chain->submitCommandBuffers(&commandsBuffers[currentImageIndex], &currentImageIndex);
+    if (result != VK_SUCCESS) {
+        Logger::logError("Failed to present swap chain image");
+        throw;
+    }
+}
+
 Scene& Engine::addScene(std::string name) {
     scenes[name] =Scene(name);
     if (active_scene == nullptr) {
@@ -97,6 +130,6 @@ void Engine::changeScene(std::string scene_name) {
     }
     active_scene = &scene_index->second;
 }
-SDL_Window* Engine::getWindow() {
-    return window;
+Device& Engine::getDevice() {
+    return *device;
 }

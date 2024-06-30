@@ -37,12 +37,14 @@ void Scene::removeStage(std::string stage){
         }
     }
 }
-Stage& Scene::getStage(std::string stage){
+Stage* Scene::getStage(std::string stage){
     for (unsigned i=0; i<stages.size(); i++) {
         if (stages[i].name == stage) {
-            return stages[i];
+            return &stages[i];
         }
     }
+    Logger::logWarning("Trying to get non existing stage: " + stage);
+    return nullptr;
 }
 
 unsigned Scene::createEntity(){

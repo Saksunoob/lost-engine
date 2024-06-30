@@ -31,7 +31,7 @@ namespace engine {
             void addStageBefore(std::string stage, std::string before);
             void addStageAt(std::string stage, unsigned index);
             void removeStage(std::string stage);
-            Stage& getStage(std::string stage);
+            Stage* getStage(std::string stage);
 
             unsigned createEntity();
             void destroyEntity(Entity entity);

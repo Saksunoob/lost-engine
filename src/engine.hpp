@@ -6,24 +6,41 @@
 #include <thread>
 
 #include <SDL2/SDL.h>
-#include <glad/glad.h>
+#include <vulkan/vulkan.hpp>
 
+#include "scene.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
-#include "scene.hpp"
+#include "vulkan/device.hpp"
+#include "vulkan/swap_chain.hpp"
+#include "vulkan/pipeline.hpp"
+#include "model.hpp"
 
 namespace engine {
     class Engine {
         static std::unordered_map<std::string, Scene> scenes;
         static Scene* active_scene;
-        static SDL_Window* window;
-        static SDL_GLContext context;
+        static Device* device;
+        static SwapChain* swap_chain;
+        static std::vector<VkCommandBuffer> commandsBuffers;
+        static unsigned currentImageIndex;
+
+        static std::unique_ptr<Model> model;
+
+        static IVector2 window_size;
+        
+        static void createCommandBuffers();
+        static void newFrame();
+        static void drawFrame();
 
         public:
-            static void init(const char* title, Vector2 window_size);
+            static void init(const char* title, IVector2 window_size);
             static void run();
             static Scene& addScene(std::string name);
             static void changeScene(std::string scene_name);
-            static SDL_Window* getWindow();
+            static Device& getDevice();
+            static IVector2 getWindowSize() {return window_size;};
+            static VkCommandBuffer& getCurrentCommandBuffer() {return commandsBuffers[currentImageIndex];};
+            static SwapChain* getSwapChain() {return swap_chain;};
     };
 }

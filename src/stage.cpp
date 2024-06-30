@@ -12,7 +12,7 @@ void Stage::removeSystem(System system) {
             return;
         }
     }
-    Logger::logError("Trying to remove a system that doesn't exist!");
+    Logger::logWarning("Trying to remove a nonexisting system");
 }
 
 void Stage::execute(Scene& scene) {

@@ -1,13 +1,13 @@
 #include <vector>
 #include <memory>
 #include <any>
-#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <chrono>
+#include <vulkan/vulkan.hpp>
 
 #include "logger.hpp"
 #include "utils.hpp"
+#include "vulkan/device.hpp"
 
 namespace engine {
     template <typename C>
@@ -48,27 +48,29 @@ namespace engine {
     };
 
     struct Mesh {
-        unsigned VAO, VBO, EBO;
-        std::vector<Vector2> verticies;
-        std::vector<unsigned> indicies;
+        std::vector<Vector2> vertices;
+        VkBuffer vertexBuffer;
+        VkDeviceMemory vertexBufferMemory;
+        unsigned vertexCount;
 
-        Mesh(std::vector<Vector2> verticies, std::vector<unsigned> indicies) : verticies(verticies), indicies(indicies) {};
+        Mesh(std::vector<Vector2> vertices) : vertices(vertices) {};
 
-        void bind();
+        static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
+        static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
     };
 
     struct UVMesh : Mesh {
         std::vector<Vector2> UVs;
 
-        UVMesh(std::vector<Vector2> verticies, std::vector<Vector2> UVs, std::vector<unsigned> indicies) : Mesh(verticies, indicies), UVs(UVs) {};
+        UVMesh(std::vector<Vector2> verticies, std::vector<Vector2> UVs, std::vector<unsigned> indicies) : Mesh(verticies), UVs(UVs) {};
 
-        void bind();
+        //void bind();
     };
 
     struct ColorMesh : Mesh {
         std::vector<Color> colors;
 
-        ColorMesh(std::vector<Vector2> verticies, std::vector<Color> colors, std::vector<unsigned> indicies) : Mesh(verticies, indicies), colors(colors) {};
+        ColorMesh(std::vector<Vector2> verticies, std::vector<Color> colors, std::vector<unsigned> indicies) : Mesh(verticies), colors(colors) {};
     };
 
     struct Camera {
