@@ -49,20 +49,37 @@ namespace engine {
 
     struct Mesh {
         std::vector<Vector2> vertices;
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-        unsigned vertexCount;
+        std::vector<unsigned> indices;
 
-        Mesh(std::vector<Vector2> vertices) : vertices(vertices) {};
+        VkBuffer vertexBuffer = nullptr;
+        VkBuffer indexBuffer = nullptr;
+
+        Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {};
+        ~Mesh() {
+            if (_device != nullptr) { // Check if any buffers have been created
+                vkDestroyBuffer(_device->device(), vertexBuffer, nullptr);
+                vkDestroyBuffer(_device->device(), indexBuffer, nullptr);
+
+                vkFreeMemory(_device->device(), vertexBufferMemory, nullptr);
+                vkFreeMemory(_device->device(), indexBufferMemory, nullptr);
+            }
+        }
+
+        void createBuffers(Device& device);
 
         static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
         static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+
+        private:
+            VkDeviceMemory vertexBufferMemory = nullptr;
+            VkDeviceMemory indexBufferMemory = nullptr;
+            Device* _device = nullptr;
     };
 
     struct UVMesh : Mesh {
         std::vector<Vector2> UVs;
 
-        UVMesh(std::vector<Vector2> verticies, std::vector<Vector2> UVs, std::vector<unsigned> indicies) : Mesh(verticies), UVs(UVs) {};
+        UVMesh(std::vector<Vector2> verticies, std::vector<Vector2> UVs, std::vector<unsigned> indicies) : Mesh(verticies, indicies), UVs(UVs) {};
 
         //void bind();
     };
@@ -70,7 +87,7 @@ namespace engine {
     struct ColorMesh : Mesh {
         std::vector<Color> colors;
 
-        ColorMesh(std::vector<Vector2> verticies, std::vector<Color> colors, std::vector<unsigned> indicies) : Mesh(verticies), colors(colors) {};
+        ColorMesh(std::vector<Vector2> verticies, std::vector<Color> colors, std::vector<unsigned> indicies) : Mesh(verticies, indicies), colors(colors) {};
     };
 
     struct Camera {

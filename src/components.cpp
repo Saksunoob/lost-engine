@@ -2,6 +2,31 @@
 
 using namespace engine;
 
+void Mesh::createBuffers(Device& device) {
+    _device = &device;
+
+    // Vertex buffer
+    VkDeviceSize vertexbufferSize = sizeof(vertices[0]) * vertices.size();
+    device.createBuffer(vertexbufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        vertexBuffer, vertexBufferMemory);
+
+    void* data;
+    vkMapMemory(device.device(), vertexBufferMemory, 0, vertexbufferSize, 0, &data);
+    memcpy(data, vertices.data(), static_cast<size_t>(vertexbufferSize));
+    vkUnmapMemory(device.device(), vertexBufferMemory);
+    
+    // Index buffer
+    VkDeviceSize indexbufferSize = sizeof(indices[0]) * indices.size();
+    device.createBuffer(indexbufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        indexBuffer, indexBufferMemory);
+
+    vkMapMemory(device.device(), indexBufferMemory, 0, indexbufferSize, 0, &data);
+    memcpy(data, indices.data(), static_cast<size_t>(indexbufferSize));
+    vkUnmapMemory(device.device(), indexBufferMemory);
+}
+
 std::vector<VkVertexInputBindingDescription> Mesh::getBindingDescriptions() {
         std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
         bindingDescriptions[0].binding = 0;

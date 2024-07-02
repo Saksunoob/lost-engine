@@ -7,7 +7,7 @@ void engine::renderMeshes(Scene& scene) {
         auto pipelineConfig = PipelineConfig::defaultConfig(Engine::getSwapChain()->width(), Engine::getSwapChain()->height());
         pipelineConfig.renderPass = Engine::getSwapChain()->getRenderPass();
 
-        pipeline = std::make_unique<Pipeline>(Engine::getDevice(), "src/shaders/UVMesh", pipelineConfig);
+        pipeline = std::make_unique<Pipeline>(Engine::getDevice(), "src/shaders/Mesh", pipelineConfig);
     }
     pipeline->bind(Engine::getCurrentCommandBuffer());
 
@@ -29,33 +29,26 @@ void engine::renderMeshes(Scene& scene) {
         }
     }
     
-    Components meshes = scene.getComponent<UVMesh>();
+    Components meshes = scene.getComponent<Mesh>();
     Components textures = scene.getComponent<Texture>();
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
     for (unsigned i = 0; i < transforms.size(); i++) {
         if (transforms[i] != nullptr && meshes[i] != nullptr && textures[i] != nullptr) {
-            UVMesh* mesh = meshes[i];
+            Mesh* mesh = meshes[i];
+
+            Device& device = Engine::getDevice();
 
             if (mesh->vertexBuffer == nullptr) {
-                Device& device = Engine::getDevice();
-
-                mesh->vertexCount = static_cast<unsigned>(mesh->vertices.size());
-
-                VkDeviceSize bufferSize = sizeof(mesh->vertices[0]) * mesh->vertexCount;
-                device.createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    mesh->vertexBuffer, mesh->vertexBufferMemory);
-
-                void* data;
-                vkMapMemory(device.device(), mesh->vertexBufferMemory, 0, bufferSize, 0, &data);
-                memcpy(data, mesh->vertices.data(), static_cast<size_t>(bufferSize));
-                vkUnmapMemory(device.device(), mesh->vertexBufferMemory);
+                mesh->createBuffers(device);
             }
 
             VkBuffer buffers[] = {mesh->vertexBuffer};
             VkDeviceSize offset[] = {0};
-            vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, 1, buffers, offset);
-            vkCmdDraw(Engine::getCurrentCommandBuffer(), mesh->vertexCount, 1, 0, 0);
+            vkCmdBindVertexBuffers(cmdBuffer, 0, 1, buffers, offset);
+            vkCmdBindIndexBuffer(cmdBuffer, mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(Engine::getCurrentCommandBuffer(), mesh->indices.size(), 1, 0, 0, 0);
         }
     }
 }
