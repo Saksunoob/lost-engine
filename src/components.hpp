@@ -40,7 +40,7 @@ namespace engine {
 
         Transform(Vector2 position, Vector2 scale, double rotation) : position(position), scale(scale), rotation(rotation) {};
 
-        glm::mat4 getTransformationMatrix();
+        glm::mat4 getTransformationMatrix() const;
     };
 
     struct GlobalTransform : Transform {
@@ -95,7 +95,7 @@ namespace engine {
 
         Camera(bool main) : main(main) {};
 
-        static glm::mat4 getProjectionMatrix(Transform& transform, IVector2 window_size);
+        static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
     };
 
     struct Texture {

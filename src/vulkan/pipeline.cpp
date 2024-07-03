@@ -71,6 +71,14 @@ PipelineConfig PipelineConfig::defaultConfig(unsigned width, unsigned height) {
     config.depthStencilInfo.front = {};  // Optional
     config.depthStencilInfo.back = {};   // Optional
 
+    config.pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    config.pipelineLayoutInfo.setLayoutCount = 0;
+    config.pipelineLayoutInfo.pSetLayouts = nullptr;
+    config.pipelineLayoutInfo.pushConstantRangeCount = 0;
+    config.pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    config.pipelineLayoutInfo.pNext = nullptr;
+    config.pipelineLayoutInfo.flags = 0;
+
     return config;
 }
 
@@ -97,25 +105,28 @@ Pipeline::Pipeline(Device& device, const char* dirPath, PipelineConfig& config) 
     fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     try
     {
-        // open files
         vShaderFile.open(vertexPath);
-        fShaderFile.open(fragmentPath);
-        std::stringstream vShaderStream, fShaderStream;
-        // read file's buffer contents into streams
+        std::stringstream vShaderStream;
         vShaderStream << vShaderFile.rdbuf();
-        fShaderStream << fShaderFile.rdbuf();
-        // close file handlers
         vShaderFile.close();
-        fShaderFile.close();
-        // convert stream into string
         vertexCode = vShaderStream.str();
-        fragmentCode = fShaderStream.str();
+        
     }
     catch (std::ifstream::failure& e)
     {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
+        Logger::logError("Failed to read file: " + vertexPath);
     }
-    createPipelineLayout();
+
+    try {
+        fShaderFile.open(fragmentPath);
+        std::stringstream fShaderStream;
+        fShaderStream << fShaderFile.rdbuf();
+        fShaderFile.close();
+        fragmentCode = fShaderStream.str();
+    } catch (std::ifstream::failure& e) {
+        Logger::logError("Failed to read file: " + fragmentPath);
+    }
+
     createShaderModule(vertexCode, &vertexModule);
     createShaderModule(fragmentCode, &fragmentModule);
 
@@ -136,14 +147,12 @@ Pipeline::Pipeline(Device& device, const char* dirPath, PipelineConfig& config) 
     shaderStages[1].pNext = nullptr;
     shaderStages[1].pSpecializationInfo = nullptr;
 
-    auto bindingDescriptions = Vertex::getBindingDescriptions();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<unsigned>(attributeDescriptions.size());
-    vertexInputInfo.vertexBindingDescriptionCount = static_cast<unsigned>(bindingDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<unsigned>(config.attributeDescriptions.size());
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<unsigned>(config.bindingDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = config.attributeDescriptions.data();
+    vertexInputInfo.pVertexBindingDescriptions = config.bindingDescriptions.data();
 
     VkPipelineViewportStateCreateInfo viewportInfo{};
     viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -165,7 +174,12 @@ Pipeline::Pipeline(Device& device, const char* dirPath, PipelineConfig& config) 
     pipelineInfo.pDepthStencilState = &config.depthStencilInfo;
     pipelineInfo.pDynamicState = nullptr;
 
-    pipelineInfo.layout = pipeline_layout;
+    if (vkCreatePipelineLayout(device.device(), &config.pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        Logger::logError("Failed to create pipeline layout");
+    }
+
+    pipelineInfo.layout = pipelineLayout;
+
     pipelineInfo.renderPass = config.renderPass;
     pipelineInfo.subpass = config.subpass;
 
@@ -187,21 +201,6 @@ void Pipeline::createShaderModule(const std::string code, VkShaderModule* shader
     if (vkCreateShaderModule(device.device(), &create_info, nullptr, shaderModule) != VK_SUCCESS) {
         Logger::logError("Failed to create shadermodule for shader: "+code);
     }
-}
-
-void Pipeline::createPipelineLayout() {
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo;
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pSetLayouts = nullptr;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    pipelineLayoutInfo.pNext = nullptr;
-    pipelineLayoutInfo.flags = 0;
-
-    if (vkCreatePipelineLayout(device.device(), &pipelineLayoutInfo, nullptr, &pipeline_layout) != VK_SUCCESS) {
-        Logger::logError("Failed to create pipeline layout");
-    } 
 }
 
 void Pipeline::bind(VkCommandBuffer commandBuffer)

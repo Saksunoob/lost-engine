@@ -14,7 +14,6 @@
 #include "vulkan/device.hpp"
 #include "vulkan/swap_chain.hpp"
 #include "vulkan/pipeline.hpp"
-#include "model.hpp"
 
 namespace engine {
     class Engine {
@@ -25,13 +24,16 @@ namespace engine {
         static std::vector<VkCommandBuffer> commandsBuffers;
         static unsigned currentImageIndex;
 
-        static std::unique_ptr<Model> model;
-
+        static SDL_Window* window;
         static IVector2 window_size;
+
+        static bool framebufferResized;
         
         static void createCommandBuffers();
+        static void recreateSwapChain();
         static void newFrame();
         static void drawFrame();
+        static void resetWindowResized() {framebufferResized = false;};
 
         public:
             static void init(const char* title, IVector2 window_size);
@@ -41,6 +43,8 @@ namespace engine {
             static Device& getDevice();
             static IVector2 getWindowSize() {return window_size;};
             static VkCommandBuffer& getCurrentCommandBuffer() {return commandsBuffers[currentImageIndex];};
+            static unsigned getCurrentSwapChainImage() {return currentImageIndex;};
             static SwapChain* getSwapChain() {return swap_chain;};
+            static bool wasWindowResized() {return framebufferResized;};
     };
 }

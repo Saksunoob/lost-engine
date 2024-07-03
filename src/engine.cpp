@@ -4,12 +4,13 @@ using namespace engine;
 
 std::unordered_map<std::string, Scene> Engine::scenes = std::unordered_map<std::string, Scene>();
 Scene* Engine::active_scene = nullptr;
+SDL_Window* Engine::window = nullptr;
 IVector2 Engine::window_size = IVector2(0, 0);
 Device* Engine::device = nullptr;
 SwapChain* Engine::swap_chain = nullptr;
 std::vector<VkCommandBuffer> Engine::commandsBuffers = std::vector<VkCommandBuffer>();
-std::unique_ptr<Model> Engine::model{};
 unsigned Engine::currentImageIndex = 0;
+bool Engine::framebufferResized = false;
 
 void Engine::init(const char* title, IVector2 window_size) {
     Engine::window_size = window_size;
@@ -20,13 +21,14 @@ void Engine::init(const char* title, IVector2 window_size) {
         exit(1);
     }
     // window creation
-    SDL_Window* window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_VULKAN);
+    window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_size.x, window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     if (window == nullptr)
     {
         std::cout << "SDL window could not initialize! SDL_Error: " << SDL_GetError();
         exit(1);
     }
+
     Engine::device = new Device(window);
     Engine::swap_chain = new SwapChain{getDevice(), {(unsigned)window_size.x, (unsigned)window_size.y}};
     createCommandBuffers();
@@ -37,18 +39,23 @@ void Engine::run() {
     bool quit = false;
     SDL_Event event;
     while (!quit) {
-        newFrame();
-        
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
             }
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WindowEventID::SDL_WINDOWEVENT_RESIZED) {
+                
+            }
         }
+        newFrame();
+
         if (active_scene == nullptr) {
             Logger::logError("No active scene!");
             throw;
         }
+        
         Engine::active_scene->executeStages();
+        
         drawFrame();
     }
     SDL_Quit();
@@ -68,8 +75,19 @@ void Engine::createCommandBuffers() {
     }
 }
 
+void Engine::recreateSwapChain() {
+    vkDeviceWaitIdle(device->device());
+
+    delete Engine::swap_chain;
+    Engine::swap_chain = new SwapChain{getDevice(), {(unsigned)window_size.x, (unsigned)window_size.y}};
+}
+
 void Engine::newFrame() {
     VkResult result = swap_chain->acquireNextImage(&currentImageIndex);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        
+    }
+
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         Logger::logError("Failed to acquire next swap chain image");
         throw;
@@ -108,10 +126,15 @@ void Engine::drawFrame() {
         throw;
     }
 
+    resetWindowResized();
     VkResult result = swap_chain->submitCommandBuffers(&commandsBuffers[currentImageIndex], &currentImageIndex);
-    if (result != VK_SUCCESS) {
-        Logger::logError("Failed to present swap chain image");
-        throw;
+    if (result == VK_SUBOPTIMAL_KHR) {
+        SDL_GetWindowSize(window, &window_size.x, &window_size.y);
+        framebufferResized = true;
+        recreateSwapChain();
+    } else if (result != VK_SUCCESS)
+    {
+        Logger::logWarning("Failed to present swap chain image");
     }
 }
 

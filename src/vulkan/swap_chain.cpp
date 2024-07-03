@@ -378,11 +378,11 @@ VkPresentModeKHR SwapChain::chooseSwapPresentMode(
         const std::vector<VkPresentModeKHR> &availablePresentModes) {
     for (const auto &availablePresentMode : availablePresentModes) {
         if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            Logger::log("Present mode: Mailbox");
+            Logger::logVerbose("Present mode: Mailbox");
             return availablePresentMode;
         }
     }
-    Logger::log("Present mode: V-Sync");
+    Logger::logVerbose("Present mode: V-Sync");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 

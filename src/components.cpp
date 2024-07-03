@@ -28,31 +28,33 @@ void Mesh::createBuffers(Device& device) {
 }
 
 std::vector<VkVertexInputBindingDescription> Mesh::getBindingDescriptions() {
-        std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
-        bindingDescriptions[0].binding = 0;
-        bindingDescriptions[0].stride = sizeof(Vector2);
-        bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return bindingDescriptions;
-    }
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
+    bindingDescriptions[0].binding = 0;
+    bindingDescriptions[0].stride = sizeof(Vector2);
+    bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return bindingDescriptions;
+}
 
-    std::vector<VkVertexInputAttributeDescription> Mesh::getAttributeDescriptions() {
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(1);
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].offset = 0;
+std::vector<VkVertexInputAttributeDescription> Mesh::getAttributeDescriptions() {
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions(1);
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].offset = 0;
 
-        return attributeDescriptions;
-    }
-glm::mat4 Transform::getTransformationMatrix() {
+    return attributeDescriptions;
+}
+
+glm::mat4 Transform::getTransformationMatrix() const {
     glm::mat4 matrix = glm::mat4(1);
+    matrix = glm::translate(matrix, glm::vec3(position.x, position.y, 0.0));
     matrix = glm::rotate(matrix, (float)rotation, glm::vec3(0, 0, 1));
     matrix = glm::scale(matrix, glm::vec3(scale.x, scale.y, 1.0));
-    matrix = glm::translate(matrix, glm::vec3(position.x, position.y, 0.0));
+    
     return matrix;
 }
 
-glm::mat4 Camera::getProjectionMatrix(Transform& transform, IVector2 window_size) {
+glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 window_size) {
     int viewport[4];
     glm::mat4 matrix = transform.getTransformationMatrix();
     matrix = glm::scale(matrix, glm::vec3(window_size.x/2.0, window_size.y/2.0, 1.0));

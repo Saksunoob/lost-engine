@@ -12,7 +12,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "device.hpp"
-#include "../model.hpp"
 
 namespace engine {
     struct PipelineConfig {
@@ -24,7 +23,9 @@ namespace engine {
         VkPipelineColorBlendAttachmentState colorBlendAttachment;
         VkPipelineColorBlendStateCreateInfo colorBlendInfo;
         VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
-        VkPipelineLayout pipelineLayout = nullptr;
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
         VkRenderPass renderPass = nullptr;
         uint32_t subpass = 0;
 
@@ -34,15 +35,13 @@ namespace engine {
     class Pipeline
     {
         Device& device;
-        VkPipelineLayout pipeline_layout;
         VkPipeline pipeline;
+        VkPipelineLayout pipelineLayout;
         VkShaderModule vertexModule;
         VkShaderModule fragmentModule;
         const PipelineConfig config;
 
         void createShaderModule(const std::string code, VkShaderModule* PipelineModule);
-
-        void createPipelineLayout();
 
     public:
         Pipeline(const Pipeline&) = delete;
@@ -55,5 +54,6 @@ namespace engine {
 
         // use/activate the Pipeline
         void bind(VkCommandBuffer commandBuffer);
+        VkPipelineLayout getPipelineLayout() {return pipelineLayout;};
     };
 }
