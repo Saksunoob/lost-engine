@@ -93,8 +93,8 @@ Pipeline::Pipeline(Device& device, const char* dirPath, PipelineConfig& config) 
     std::string vertexPath(dirPath);
     std::string fragmentPath(dirPath);
 
-    vertexPath.append("/shader.vert.spv");
-    fragmentPath.append("/shader.frag.spv");
+    vertexPath.append("/shader.vert");
+    fragmentPath.append("/shader.frag");
 
     std::string vertexCode;
     std::string fragmentCode;
