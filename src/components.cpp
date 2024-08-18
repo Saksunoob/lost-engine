@@ -61,28 +61,3 @@ glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 windo
 
     return glm::inverse(matrix);
 }
-
-Texture::Texture(Color color, IVector2 size) : size(size) {
-    /*
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    std::vector<Color> image = std::vector<Color>(size.x*size.y, color);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_FLOAT, image.data());
-    glGenerateMipmap(GL_TEXTURE_2D); */
-}
-
-void Texture::use(unsigned slot) {
-    /*
-    if (slot > 31) {
-        return;
-    }
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, textureID); */
-}

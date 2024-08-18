@@ -10,9 +10,13 @@ static VkDescriptorSetLayout descriptorSetLayout;
 std::vector<VkDescriptorSet> descriptorSets;
 
 void engine::renderMeshes(Scene& scene) {
+    struct Push {
+        glm::mat4 matrix;
+        Color color;
+    };
 
     if (!shader_initialized) {
-        shader = new Shader("shaders/Mesh", {{VAR_VEC2}}, sizeof(glm::mat4));
+        shader = new Shader("shaders/Mesh", {{VAR_VEC2}}, sizeof(Push));
         shader_initialized = true;
     }
 
@@ -35,21 +39,24 @@ void engine::renderMeshes(Scene& scene) {
     }
     
     Components meshes = scene.getComponent<Mesh>();
-    Components textures = scene.getComponent<Texture>();
+    Components colors = scene.getComponent<Color>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*transforms[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
     shader->bind();
     for (unsigned i = 0; i < transforms.size(); i++) {
-        if (transforms[i] != nullptr && meshes[i] != nullptr && textures[i] != nullptr) {
+        if (transforms[i] != nullptr && meshes[i] != nullptr && colors[i] != nullptr) {
             Mesh* mesh = meshes[i];
             shader->vertexBuffer().bind(mesh->vertices);
             shader->indexBuffer().bind(mesh->indices);
 
             glm::mat4 transform = transforms[i]->getTransformationMatrix();
-            glm::mat4 matrix = proj * transform;
-            shader->pushConstant(&matrix, sizeof(matrix));
+            Push push {
+                proj * transform,
+                *colors[i]
+            };
+            shader->pushConstant(&push, sizeof(Push));
 
             vkCmdDrawIndexed(cmdBuffer, mesh->indices.size(), 1, 0, 0, 0);
         }

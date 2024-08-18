@@ -76,35 +76,11 @@ namespace engine {
             Device* _device = nullptr;
     };
 
-    struct UVMesh : Mesh {
-        std::vector<Vector2> UVs;
-
-        UVMesh(std::vector<Vector2> verticies, std::vector<Vector2> UVs, std::vector<unsigned> indicies) : Mesh(verticies, indicies), UVs(UVs) {};
-
-        //void bind();
-    };
-
-    struct ColorMesh : Mesh {
-        std::vector<Color> colors;
-
-        ColorMesh(std::vector<Vector2> verticies, std::vector<Color> colors, std::vector<unsigned> indicies) : Mesh(verticies, indicies), colors(colors) {};
-    };
-
     struct Camera {
         bool main;
 
         Camera(bool main) : main(main) {};
 
         static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
-    };
-
-    struct Texture {
-        unsigned int textureID;
-		IVector2 size;
-
-        Texture(Color color, IVector2 size);
-        Texture(const char* file_path);
-
-        void use(unsigned);
     };
 }

@@ -19,12 +19,12 @@ int main() {
         0, 1, 2, 0, 3, 1
     };
     main_scene.addComponent(square, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square, engine::Texture(engine::Color(1, 1, 0), engine::IVector2(16, 16)));
+    main_scene.addComponent(square, engine::Color(1, 0, 0));
     main_scene.addComponent(square, engine::GlobalTransform(engine::Vector2(100, 0), engine::Vector2(200, 200), 1));
 
     engine::Entity square2 = main_scene.createEntity();
     main_scene.addComponent(square2, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square2, engine::Texture(engine::Color(1, 1, 0), engine::IVector2(16, 16)));
+    main_scene.addComponent(square2, engine::Color(0, 1, 0));
     main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), -1));
 
     main_scene.addStageAt("render", 0);
