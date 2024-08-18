@@ -95,15 +95,6 @@ namespace engine {
             }
     };
 
-    class ShaderUniform {
-        unsigned size;
-        bool vertex, fragment;
-        std::vector<VkBuffer> buffers;
-        std::vector<VkDeviceMemory> memory;
-        std::vector<void*> bufferMap;
-        std::vector<VkDescriptorSet> descriptorSet;
-    };
-
     class Shader {
         const char* shaderPath;
 
@@ -112,17 +103,17 @@ namespace engine {
 
         struct PerImageData {
             VkDescriptorPool descriptorPool;
-            std::vector<ShaderUniform> uniforms;
             ShaderVertexBuffer vertexBuffer;
             ShaderIndexBuffer indexBuffer;
 
-            PerImageData(std::vector<ShaderVariable> variables) : vertexBuffer(variables), indexBuffer() {};
+            PerImageData(std::vector<ShaderVariable> variables) : 
+            vertexBuffer(variables), indexBuffer() {};
         };
 
         std::vector<PerImageData> perImageData;
 
         public:
-            Shader(const char* shaderPath, std::vector<ShaderVariable> variables, std::vector<ShaderUniform> uniforms);
+            Shader(const char* shaderPath, std::vector<ShaderVariable> variables);
             ~Shader();
 
             void recreate();

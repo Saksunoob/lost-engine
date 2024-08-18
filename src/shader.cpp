@@ -72,8 +72,29 @@ namespace engine {
         return attributeDescriptions;
     }
 
-    Shader::Shader(const char* shaderPath, std::vector<ShaderVariable> variables, std::vector<ShaderUniform> uniforms) :
-        shaderPath(shaderPath), perImageData({Engine::getSwapChain()->imageCount(), variables}) {
+    Shader::Shader(const char* shaderPath, std::vector<ShaderVariable> variables) :
+        shaderPath(shaderPath) {
+
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(Engine::getDevice().device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+            Logger::logError("failed to create descriptor set layout!");
+            return;
+        }
+
+        for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
+            perImageData.push_back(PerImageData(variables));
+        }
         recreate();
     }
 
@@ -96,41 +117,15 @@ namespace engine {
         pipelineConfig.renderPass = Engine::getSwapChain()->getRenderPass();
         pipelineConfig.pipelineLayoutInfo.setLayoutCount = 1;
 
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
-        layoutInfo.pBindings = &uboLayoutBinding;
-
-        if (vkCreateDescriptorSetLayout(device.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            Logger::logError("failed to create descriptor set layout!");
-            return;
-        }
         pipelineConfig.pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
         pipelineConfig.attributeDescriptions = vertexBuffer().getAttributeDescriptions();
         pipelineConfig.bindingDescriptions = {vertexBuffer().getBindingDescription()};
         delete pipeline;
         pipeline = new Pipeline(Engine::getDevice(), shaderPath, pipelineConfig);
-        /*
-
+        
+        // Change to non coantant
         VkDeviceSize bufferSize = sizeof(glm::mat4)*2;
-
-        uniformBuffers.resize(Engine::getSwapChain()->imageCount()*2);
-        uniformBuffersMemory.resize(Engine::getSwapChain()->imageCount()*2);
-        uniformBuffersMapped.resize(Engine::getSwapChain()->imageCount()*2);
-
-        for (size_t i = 0; i < Engine::getSwapChain()->imageCount()*2; i++) {
-            device.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-
-            vkMapMemory(device.device(), uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
-        }*/
     }
 
     void Shader::bind() {

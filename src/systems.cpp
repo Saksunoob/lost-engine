@@ -10,8 +10,9 @@ static VkDescriptorSetLayout descriptorSetLayout;
 std::vector<VkDescriptorSet> descriptorSets;
 
 void engine::renderMeshes(Scene& scene) {
+
     if (!shader_initialized) {
-        shader = new Shader("shaders/Mesh", {{VAR_VEC2}}, {});
+        shader = new Shader("shaders/Mesh", {{VAR_VEC2}});
         shader_initialized = true;
     }
 
