@@ -129,6 +129,7 @@ void Device::pickPhysicalDevice() {
         for (const auto &device : devices) {
             vkGetPhysicalDeviceProperties(device, &properties);
             Logger::logVerbose("\t" + std::string(properties.deviceName));
+            Logger::logVerbose("\tMax push constants size: " + std::to_string(properties.limits.maxPushConstantsSize));
         }
     }
 

@@ -12,7 +12,7 @@ std::vector<VkDescriptorSet> descriptorSets;
 void engine::renderMeshes(Scene& scene) {
 
     if (!shader_initialized) {
-        shader = new Shader("shaders/Mesh", {{VAR_VEC2}});
+        shader = new Shader("shaders/Mesh", {{VAR_VEC2}}, sizeof(glm::mat4));
         shader_initialized = true;
     }
 
@@ -37,6 +37,8 @@ void engine::renderMeshes(Scene& scene) {
     Components meshes = scene.getComponent<Mesh>();
     Components textures = scene.getComponent<Texture>();
 
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*transforms[main_camera], Engine::getWindowSize());
+
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
     shader->bind();
     for (unsigned i = 0; i < transforms.size(); i++) {
@@ -44,6 +46,10 @@ void engine::renderMeshes(Scene& scene) {
             Mesh* mesh = meshes[i];
             shader->vertexBuffer().bind(mesh->vertices);
             shader->indexBuffer().bind(mesh->indices);
+
+            glm::mat4 transform = transforms[i]->getTransformationMatrix();
+            glm::mat4 matrix = proj * transform;
+            shader->pushConstant(&matrix, sizeof(matrix));
 
             vkCmdDrawIndexed(cmdBuffer, mesh->indices.size(), 1, 0, 0, 0);
         }

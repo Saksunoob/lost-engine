@@ -2,11 +2,10 @@
 
 layout(location=0) in vec2 position;
 
-layout(binding=0) uniform Matricies {
-	mat4 trans;
-	mat4 proj;
-} matricies;
+layout(push_constant) uniform Matrix {
+	mat4 mat;
+} matrix;
 
 void main() {
-	gl_Position = /*matricies.proj * matricies.trans * */vec4(position, 0.0, 1.0);
-}
+	gl_Position = matrix.mat * vec4(position, 0.0, 1.0);
+} 

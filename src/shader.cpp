@@ -72,25 +72,8 @@ namespace engine {
         return attributeDescriptions;
     }
 
-    Shader::Shader(const char* shaderPath, std::vector<ShaderVariable> variables) :
-        shaderPath(shaderPath) {
-
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
-        layoutInfo.pBindings = &uboLayoutBinding;
-
-        if (vkCreateDescriptorSetLayout(Engine::getDevice().device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            Logger::logError("failed to create descriptor set layout!");
-            return;
-        }
+    Shader::Shader(const char* shaderPath, std::vector<ShaderVariable> variables, unsigned totalPushConstantSize) :
+        shaderPath(shaderPath), totalPushConstantSize(totalPushConstantSize) {
 
         for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
             perImageData.push_back(PerImageData(variables));
@@ -113,19 +96,20 @@ namespace engine {
     void Shader::recreate() {
         Device& device = Engine::getDevice();
 
+        VkPushConstantRange pushConstantRange;
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = totalPushConstantSize;
+
         auto pipelineConfig = PipelineConfig::defaultConfig(Engine::getSwapChain()->width(), Engine::getSwapChain()->height());
         pipelineConfig.renderPass = Engine::getSwapChain()->getRenderPass();
-        pipelineConfig.pipelineLayoutInfo.setLayoutCount = 1;
-
-        pipelineConfig.pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        pipelineConfig.pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineConfig.pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
         pipelineConfig.attributeDescriptions = vertexBuffer().getAttributeDescriptions();
         pipelineConfig.bindingDescriptions = {vertexBuffer().getBindingDescription()};
         delete pipeline;
         pipeline = new Pipeline(Engine::getDevice(), shaderPath, pipelineConfig);
-        
-        // Change to non coantant
-        VkDeviceSize bufferSize = sizeof(glm::mat4)*2;
     }
 
     void Shader::bind() {

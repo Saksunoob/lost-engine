@@ -4,7 +4,7 @@ using namespace engine;
 
 std::string Logger::last_message = "";
 unsigned Logger::last_message_count = 0;
-bool Logger::VERBOSE = false;
+bool Logger::VERBOSE = true;
 
 void Logger::log(std::string message) {
     if (last_message == message) {

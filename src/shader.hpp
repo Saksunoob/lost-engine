@@ -95,11 +95,15 @@ namespace engine {
             }
     };
 
+    struct PushConstantData {
+
+    };
+
     class Shader {
         const char* shaderPath;
 
         Pipeline* pipeline;
-        VkDescriptorSetLayout descriptorSetLayout;
+        unsigned totalPushConstantSize;
 
         struct PerImageData {
             VkDescriptorPool descriptorPool;
@@ -113,11 +117,14 @@ namespace engine {
         std::vector<PerImageData> perImageData;
 
         public:
-            Shader(const char* shaderPath, std::vector<ShaderVariable> variables);
+            Shader(const char* shaderPath, std::vector<ShaderVariable> variables, unsigned totalPushConstantSize);
             ~Shader();
 
             void recreate();
             void bind();
+            void pushConstant(const void* data, unsigned size) {
+                vkCmdPushConstants(Engine::getCurrentCommandBuffer(), pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, size, data);
+            }
 
             ShaderVertexBuffer& vertexBuffer() {
                 return perImageData[Engine::getCurrentSwapChainImage()].vertexBuffer;
