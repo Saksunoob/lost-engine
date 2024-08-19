@@ -1,6 +1,5 @@
 #include "scene.hpp"
 
-
 using namespace engine;
 
 void Scene::executeStages(){
@@ -37,7 +36,7 @@ void Scene::removeStage(std::string stage){
         }
     }
 }
-Stage* Scene::getStage(std::string stage){
+engine::Stage* Scene::getStage(std::string stage) {
     for (unsigned i=0; i<stages.size(); i++) {
         if (stages[i].name == stage) {
             return &stages[i];
@@ -47,23 +46,23 @@ Stage* Scene::getStage(std::string stage){
     return nullptr;
 }
 
-unsigned Scene::createEntity(){
+Entity Scene::createEntity(){
     if (empty_entity_ids.size() == 0) {
         for (unsigned i = 0; i < components.size(); i++) {
             components[i].push_back(std::unique_ptr<std::any>());
         }
         entity_vector_length += 1;
-        return entity_vector_length - 1;
+        return Entity{entity_vector_length - 1, *this};
     } else {
         unsigned entity_id = empty_entity_ids.back();
         empty_entity_ids.pop_back();
         for (unsigned i = 0; i < components.size(); i++) {
             components[i][entity_id] = std::unique_ptr<std::any>();
         }
-        return entity_id;
+        return Entity{entity_id, *this};
     }
 }
-void Scene::destroyEntity(unsigned entity){
+void Scene::destroyEntity(Entity entity){
     for (unsigned i = 0; i < components.size(); i++) {
         components[i][entity] = std::unique_ptr<std::any>();
         empty_entity_ids.push_back(entity);

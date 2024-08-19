@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -11,15 +13,47 @@
 
 namespace engine {
 
-    typedef unsigned Entity;
+    class Scene;
+
+    struct Entity {
+        unsigned id;
+        Scene& scene;
+
+        template <typename C>
+        void addComponent(C component) {
+            scene.addComponent(this, component);
+        }
+
+        operator unsigned() const{
+            return id;
+        }
+    };
 
     class Scene {
         std::string name;
         std::vector<Stage> stages = std::vector<Stage>();
         unsigned entity_vector_length = 0;
-        std::vector<Entity> empty_entity_ids = std::vector<Entity>();
+        std::vector<unsigned> empty_entity_ids = std::vector<unsigned>();
         std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
         std::unordered_map<std::type_index, unsigned> component_mapping = std::unordered_map<std::type_index, unsigned>();
+
+        template<typename... C>
+        std::vector<unsigned> FilterValidEntities(std::tuple<Component<C>...>& componentTuples) {
+            std::vector<unsigned> validIndices;
+
+            for (unsigned i = 0; i < entity_vector_length; ++i) {
+                bool isValid = (std::get<Component<C>>(componentTuples)[i] && ...);
+                if (isValid) {
+                    validIndices.push_back(i);
+                }
+            }
+            return validIndices;
+        }
+
+        template<typename... C>
+        Components<C...> CreateFilteredComponents(std::tuple<Component<C>...>& componentTuples, const std::vector<unsigned>& validIndices) {
+            return Components<C...>(Component<C>(std::get<Component<C>>(componentTuples), validIndices)...);
+        }
 
         public:
             Scene(std::string name) : name(name) {}
@@ -33,7 +67,7 @@ namespace engine {
             void removeStage(std::string stage);
             Stage* getStage(std::string stage);
 
-            unsigned createEntity();
+            Entity createEntity();
             void destroyEntity(Entity entity);
 
             template <typename C>
@@ -45,15 +79,23 @@ namespace engine {
                 }
                 components[component_mapping[type]][entity] = std::make_unique<std::any>(std::move(component));
             }
-
-            template <typename C>
-            Components<C> getComponent() {
-                std::type_index type = std::type_index(typeid(C));
-                if (component_mapping.find(type) == component_mapping.end()) {
+            template<typename C>
+            Component<C> GetComponent() {
+                auto it = component_mapping.find(std::type_index(typeid(C)));
+                if (it == component_mapping.end()) {
                     Logger::logError(std::string("Getting component that doesn't exist [") + std::string(typeid(C).name()) + std::string("]"));
-                    return Components<C>(nullptr);
+                    std::vector<std::unique_ptr<std::any>> empty(entity_vector_length);
+                    return Component<C>(empty);
                 }
-                return Components<C>(&components[component_mapping[std::type_index(typeid(C))]]);
+                unsigned index = it->second;
+                return Component<C>(components[index]);
+            }
+
+            template<typename... C>
+            Components<C...> GetWithComponents() {
+                std::tuple<Component<C>...> componentTuples = std::make_tuple(GetComponent<C>()...);
+                std::vector<unsigned> validIndices = FilterValidEntities<C...>(componentTuples);
+                return CreateFilteredComponents<C...>(componentTuples, validIndices);
             }
     };
 }

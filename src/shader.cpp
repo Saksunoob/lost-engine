@@ -45,6 +45,7 @@ namespace engine {
             case VAR_UVEC4:
                 return 16;
         }
+        throw("Invalid Shared variable type: " + std::to_string(type));
     }
 
     VkVertexInputBindingDescription ShaderVertexBuffer::getBindingDescription() {
