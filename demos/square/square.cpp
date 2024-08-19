@@ -27,7 +27,11 @@ int main() {
     main_scene.addComponent(square2, engine::Color(0, 1, 0));
     main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), -1));
 
-    main_scene.addStageAt("render", 0);
-    main_scene.getStage("render")->addSystem(engine::renderMeshes);
+    main_scene.addStageAt("preupdate", 0);
+    main_scene.getStage("preupdate")->addSystem(engine::timeSystem);
+    main_scene.addStageAt("render", 1);
+    main_scene.getStage("render")->addSystem(engine::renderColorMeshes);
+
+    main_scene.addResource(engine::Time{});
     engine::Engine::run();
 }

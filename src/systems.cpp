@@ -1,4 +1,5 @@
 #include "systems.hpp"
+#include "resources.hpp"
 
 void engine::renderColorMeshes(Scene& scene) {
     struct Push {
@@ -40,4 +41,9 @@ void engine::renderColorMeshes(Scene& scene) {
 
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
+}
+
+void engine::timeSystem(Scene& scene) {
+    Time& time = scene.getResource<Time>();
+    time.newFrame();
 }

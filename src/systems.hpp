@@ -7,4 +7,5 @@
 
 namespace engine {
     void renderColorMeshes(Scene& scene);
+    void timeSystem(Scene& scene);
 }

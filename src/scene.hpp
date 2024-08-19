@@ -34,6 +34,7 @@ namespace engine {
         std::vector<unsigned> empty_entity_ids = std::vector<unsigned>();
         std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
         std::unordered_map<std::type_index, unsigned> component_mapping = std::unordered_map<std::type_index, unsigned>();
+        std::unordered_map<std::type_index, std::any> resources{};
 
         template<typename... C>
         std::vector<unsigned> FilterValidEntities(std::tuple<Component<C>...>& componentTuples) {
@@ -102,6 +103,18 @@ namespace engine {
                 std::tuple<Component<C>...> componentTuples = std::make_tuple(GetComponent<C>()...);
                 std::vector<unsigned> validIndices = FilterValidEntities<C...>(componentTuples);
                 return CreateFilteredComponents<C...>(componentTuples, validIndices);
+            }
+
+            template<typename R>
+            void addResource(R resource) {
+                std::type_index id = typeid(R);
+                resources[id] = resource;
+            }
+
+            template<typename R>
+            R& getResource() {
+                std::type_index id = typeid(R);
+                return std::any_cast<R&>(resources.at(id));
             }
     };
 
