@@ -21,7 +21,7 @@ void Engine::init(const char* title, IVector2 window_size) {
 	  // initialize and configure
     if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
-        std::cout << "SDL could not initialize! SDL_Error: " << SDL_GetError();
+        Logger::logError("SDL could not initialize! SDL_Error: " + std::string(SDL_GetError()));
         exit(1);
     }
     // window creation
@@ -29,7 +29,7 @@ void Engine::init(const char* title, IVector2 window_size) {
 
     if (window == nullptr)
     {
-        std::cout << "SDL window could not initialize! SDL_Error: " << SDL_GetError();
+        Logger::logError("SDL window could not initialize! SDL_Error: " + std::string(SDL_GetError()));
         exit(1);
     }
 

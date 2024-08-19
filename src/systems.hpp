@@ -6,5 +6,5 @@
 #include "shader.hpp"
 
 namespace engine {
-    void renderMeshes(Scene& scene);
+    void renderColorMeshes(Scene& scene);
 }

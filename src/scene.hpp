@@ -77,6 +77,14 @@ namespace engine {
                 }
                 components[component_mapping[type]][entity] = std::make_unique<std::any>(std::move(component));
             }
+            template <typename C>
+            void addComponent() {
+                std::type_index type = std::type_index(typeid(C));
+                if (component_mapping.find(type) == component_mapping.end()) {
+                    components.push_back(std::vector<std::unique_ptr<std::any>>(entity_vector_length));
+                    component_mapping[type] = components.size() - 1;
+                }
+            }
             template<typename C>
             Component<C> GetComponent() {
                 auto it = component_mapping.find(std::type_index(typeid(C)));

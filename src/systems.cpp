@@ -1,6 +1,6 @@
 #include "systems.hpp"
 
-void engine::renderMeshes(Scene& scene) {
+void engine::renderColorMeshes(Scene& scene) {
     struct Push {
         glm::mat4 matrix;
         Color color;
