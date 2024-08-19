@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include "vulkan/pipeline.hpp"
+#include "vulkan/device.hpp"
 #include "engine.hpp"
 
 
@@ -35,12 +36,6 @@ namespace engine {
         public:
             ShaderVertexBuffer(std::vector<ShaderVariable> variables);
             ~ShaderVertexBuffer();
-            /*
-            ShaderVertexBuffer& operator=(ShaderVertexBuffer&) = delete;
-            ShaderVertexBuffer& operator=(ShaderVertexBuffer&&) = delete;
-            ShaderVertexBuffer(ShaderVertexBuffer&) = delete;
-            ShaderVertexBuffer(ShaderVertexBuffer&&) = delete;
-            */
 
             template <typename T>
             void bind(std::vector<T> bufferData) {

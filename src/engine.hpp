@@ -2,11 +2,6 @@
 
 #include <unordered_map>
 #include <string>
-#include <iostream>
-#include <thread>
-
-#include <SDL2/SDL.h>
-#include <vulkan/vulkan.hpp>
 
 #include "scene.hpp"
 #include "logger.hpp"

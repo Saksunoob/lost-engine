@@ -1,7 +1,5 @@
 #pragma once
 
-#include "device.hpp"
-
 // vulkan headers
 #include <vulkan/vulkan.h>
 
@@ -10,6 +8,8 @@
 #include <vector>
 
 namespace engine {
+
+class Device;
 
 class SwapChain {
     public:

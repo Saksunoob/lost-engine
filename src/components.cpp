@@ -1,6 +1,19 @@
 #include "components.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include "vulkan/device.hpp"
+
 using namespace engine;
+
+Mesh::~Mesh() {
+    if (_device != nullptr) { // Check if any buffers have been created
+        vkDestroyBuffer(_device->device(), vertexBuffer, nullptr);
+        vkDestroyBuffer(_device->device(), indexBuffer, nullptr);
+
+        vkFreeMemory(_device->device(), vertexBufferMemory, nullptr);
+        vkFreeMemory(_device->device(), indexBufferMemory, nullptr);
+    }
+}
 
 void Mesh::createBuffers(Device& device) {
     _device = &device;

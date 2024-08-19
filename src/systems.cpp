@@ -6,7 +6,7 @@ void engine::renderMeshes(Scene& scene) {
         Color color;
     };
 
-    static Shader shader("shaders/Mesh", {{VAR_VEC2}}, sizeof(Push));
+    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, sizeof(Push));
 
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();

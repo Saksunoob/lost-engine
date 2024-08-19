@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.hpp>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
 
 #include "../logger.hpp"
+
+struct SDL_Window;
 
 namespace engine {
 

@@ -1,5 +1,7 @@
 #include "swap_chain.hpp"
 
+#include "device.hpp"
+
 // std
 #include <array>
 #include <cstdlib>

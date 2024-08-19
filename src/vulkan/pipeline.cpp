@@ -1,5 +1,11 @@
 #include "pipeline.hpp"
 
+#include "device.hpp"
+
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
 using namespace engine;
 
 PipelineConfig PipelineConfig::defaultConfig(unsigned width, unsigned height) {

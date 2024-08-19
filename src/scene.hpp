@@ -20,9 +20,7 @@ namespace engine {
         Scene& scene;
 
         template <typename C>
-        void addComponent(C component) {
-            scene.addComponent(this, component);
-        }
+        void addComponent(C component);
 
         operator unsigned() const{
             return id;
@@ -98,4 +96,9 @@ namespace engine {
                 return CreateFilteredComponents<C...>(componentTuples, validIndices);
             }
     };
+
+    template <typename C>
+    void Entity::addComponent(C component) {
+        scene.addComponent(this, component);
+    }
 }

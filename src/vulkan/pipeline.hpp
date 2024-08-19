@@ -1,19 +1,12 @@
 #pragma once
 
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <vulkan/vulkan.hpp>
 
-#include "device.hpp"
-
 namespace engine {
+    class Device;
+
     struct PipelineConfig {
         VkViewport viewport;
         VkRect2D scissor;

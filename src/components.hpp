@@ -4,15 +4,13 @@
 #include <memory>
 #include <tuple>
 #include <any>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan.hpp>
-
-#include "logger.hpp"
+#include <glm/glm.hpp>
 #include "utils.hpp"
-#include "vulkan/device.hpp"
 
 namespace engine {
+    class Device;
+
     template <typename C>
     class Component {
         std::vector<std::unique_ptr<std::any>>& components;
@@ -101,15 +99,7 @@ namespace engine {
         VkBuffer indexBuffer = nullptr;
 
         Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {};
-        ~Mesh() {
-            if (_device != nullptr) { // Check if any buffers have been created
-                vkDestroyBuffer(_device->device(), vertexBuffer, nullptr);
-                vkDestroyBuffer(_device->device(), indexBuffer, nullptr);
-
-                vkFreeMemory(_device->device(), vertexBufferMemory, nullptr);
-                vkFreeMemory(_device->device(), indexBufferMemory, nullptr);
-            }
-        }
+        ~Mesh();
 
         void createBuffers(Device& device);
 

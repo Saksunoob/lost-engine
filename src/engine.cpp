@@ -1,4 +1,8 @@
 #include "engine.hpp"
+#include "scene.hpp"
+#include "vulkan/device.hpp"
+#include "vulkan/swap_chain.hpp"
+#include "vulkan/pipeline.hpp"
 
 using namespace engine;
 
