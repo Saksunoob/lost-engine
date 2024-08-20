@@ -2,12 +2,12 @@
 #include "resources.hpp"
 
 void engine::renderColorMeshes(Scene& scene) {
-    struct Push {
+    struct Data {
         glm::mat4 matrix;
         Color color;
     };
 
-    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, sizeof(Push));
+    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, 0, sizeof(Data));
 
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();
@@ -33,12 +33,11 @@ void engine::renderColorMeshes(Scene& scene) {
         shader.vertexBuffer().bind(colorMesh.Get<Mesh>()->vertices);
         shader.indexBuffer().bind(colorMesh.Get<Mesh>()->indices);
 
-        Push push {
+        Data data {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
             *colorMesh.Get<Color>()
         };
-        shader.pushConstant(&push, sizeof(Push));
-
+        shader.pushUniform(data);
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
 }

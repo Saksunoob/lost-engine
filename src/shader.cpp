@@ -2,23 +2,16 @@
 
 namespace engine {
 
-    ShaderVertexBuffer::ShaderVertexBuffer(std::vector<ShaderVariable> variables) : variables(variables) {
-        for (unsigned i = 0; i < variables.size(); i++) {
-            bindingSize += getVarTypeSize(variables[i].type);
+    unsigned ShaderVariables::getTotalSize() {
+        unsigned size = 0;
+        for (int i = 0; i < types.size(); i++) {
+            size += getVariableSize(i);
         }
-    }
-    ShaderVertexBuffer::~ShaderVertexBuffer() {
-        VkDevice device = Engine::getDevice().device();
-        for (VkBuffer buffer : buffers) {
-            vkDestroyBuffer(device, buffer, nullptr);
-        }
-        for (VkDeviceMemory memory : memories) {
-            vkFreeMemory(device, memory, nullptr);
-        }
+        return size;
     }
 
-    unsigned ShaderVertexBuffer::getVarTypeSize(ShaderVarType type) {
-        switch (type)
+    unsigned ShaderVariables::getVariableSize(unsigned index) {
+        switch (types[index])
         {
             case VAR_FLOAT:
                 return 4;
@@ -45,41 +38,36 @@ namespace engine {
             case VAR_UVEC4:
                 return 16;
         }
-        throw("Invalid Shared variable type: " + std::to_string(type));
     }
 
-    VkVertexInputBindingDescription ShaderVertexBuffer::getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescriptions;
-        bindingDescriptions.binding = 0;
-        bindingDescriptions.stride = bindingSize;
-        bindingDescriptions.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return bindingDescriptions;
+    std::vector<VkVertexInputBindingDescription> ShaderVariables::getBindingDescriptions() {
+        VkVertexInputBindingDescription bindingDescription;
+        bindingDescription.binding = 0;
+        bindingDescription.stride = getTotalSize();
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        return {bindingDescription};
     }
-    std::vector<VkVertexInputAttributeDescription> ShaderVertexBuffer::getAttributeDescriptions() {
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(variables.size());
-
+    std::vector<VkVertexInputAttributeDescription> ShaderVariables::getAttributeDescriptions() {
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(types.size());
         unsigned offset = 0;
-
-        for (unsigned i = 0; i < variables.size(); i++) {
+        for (unsigned i = 0; i < types.size(); i++) {
             attributeDescriptions[i].binding = 0;
-            attributeDescriptions[i].format = static_cast<VkFormat>(variables[i].type);
+            attributeDescriptions[i].format = static_cast<VkFormat>(types[i]);
             attributeDescriptions[i].location = i;
             attributeDescriptions[i].offset = offset;
 
-            offset += getVarTypeSize(variables[i].type);
+            offset += getVariableSize(i);
         }
-        
-
         return attributeDescriptions;
     }
 
-    Shader::Shader(const char* shaderPath, std::vector<ShaderVariable> variables, unsigned totalPushConstantSize) :
-        shaderPath(shaderPath), totalPushConstantSize(totalPushConstantSize) {
+    Shader::Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize) :
+        shaderPath(shaderPath), pushConstantSize(pushConstantSize), uniformSize(uniformSize), variables(variables) {
 
-        for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
-            perImageData.push_back(PerImageData(variables));
-        }
         recreate();
+        for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
+            perImageData.push_back(PerImageData(variables, uniformSize, descriptorSetLayout));
+        }
     }
 
     Shader::~Shader() {
@@ -97,18 +85,39 @@ namespace engine {
     void Shader::recreate() {
         Device& device = Engine::getDevice();
 
+        VkDescriptorSetLayoutBinding uniformBufferBinding = {};
+        uniformBufferBinding.binding = 0;
+        uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uniformBufferBinding.descriptorCount = 1;
+        uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        uniformBufferBinding.pImmutableSamplers = nullptr;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pNext = nullptr;
+        layoutInfo.pBindings = &uniformBufferBinding;
+
+        if (vkCreateDescriptorSetLayout(device.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create descriptor set layout!");
+        }
+
         VkPushConstantRange pushConstantRange;
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = totalPushConstantSize;
+        pushConstantRange.size = pushConstantSize;
 
         auto pipelineConfig = PipelineConfig::defaultConfig(Engine::getSwapChain()->width(), Engine::getSwapChain()->height());
         pipelineConfig.renderPass = Engine::getSwapChain()->getRenderPass();
         pipelineConfig.pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineConfig.pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-        pipelineConfig.attributeDescriptions = vertexBuffer().getAttributeDescriptions();
-        pipelineConfig.bindingDescriptions = {vertexBuffer().getBindingDescription()};
+        pipelineConfig.pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineConfig.pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+
+        pipelineConfig.attributeDescriptions = variables.getAttributeDescriptions();
+        pipelineConfig.bindingDescriptions = variables.getBindingDescriptions();
         delete pipeline;
         pipeline = new Pipeline(Engine::getDevice(), shaderPath, pipelineConfig);
     }

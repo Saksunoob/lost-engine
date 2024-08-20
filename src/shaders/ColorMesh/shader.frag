@@ -2,11 +2,11 @@
 
 layout (location = 0) out vec4 outColor;
 
-layout(push_constant) uniform Push {
+layout(set=0, binding=0) uniform Data {
 	mat4 mat;
 	vec4 color;
-} push;
+} data;
 
 void main() {
-	outColor = push.color;
+	outColor = data.color;
 }

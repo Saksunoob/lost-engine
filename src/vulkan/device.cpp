@@ -344,9 +344,20 @@ bool Device::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
+    Logger::logVerbose("available extensions: ");
+    for (const auto &extension : availableExtensions) {
+        Logger::logVerbose("\t" + std::string(extension.extensionName));
+    }
+
     for (const auto &extension : availableExtensions) {
         requiredExtensions.erase(extension.extensionName);
     }
+
+    Logger::logVerbose("missing extensions: ");
+    for (const auto &extension : requiredExtensions) {
+        Logger::logVerbose("\t" + std::string(extension));
+    }
+
 
     return requiredExtensions.empty();
 }
