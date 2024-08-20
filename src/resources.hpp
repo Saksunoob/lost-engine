@@ -1,6 +1,7 @@
 #include <chrono>
-#include <iostream>
-
+#include <unordered_map>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_events.h>
 
 namespace engine {
     class Time {
@@ -18,5 +19,21 @@ namespace engine {
             delta_time = static_cast<double>(new_frame-last_frame) / 1e6;
             last_frame = new_frame;
         }
+    };
+
+    struct KeyState {
+        bool pressed;
+        bool justChanged;
+    };
+
+    class Input {
+        std::unordered_map<int, KeyState> keys;
+        public:
+        void handleKeyEvent(SDL_Event& event);
+        void newFrame();
+
+        bool getKey(SDL_KeyCode) const;
+        bool getKeyJustPressed(SDL_KeyCode) const;
+        bool getKeyJustReleased(SDL_KeyCode) const;
     };
 }

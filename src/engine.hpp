@@ -33,6 +33,7 @@ namespace engine {
         public:
             static void init(const char* title, IVector2 window_size);
             static void run();
+            static void quit();
             static Scene& addScene(std::string name);
             static void changeScene(std::string scene_name);
             static Device& getDevice();

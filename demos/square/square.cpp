@@ -29,9 +29,11 @@ int main() {
 
     main_scene.addStageAt("preupdate", 0);
     main_scene.getStage("preupdate")->addSystem(engine::timeSystem);
+    main_scene.getStage("preupdate")->addSystem(engine::pollSDLEvents);
     main_scene.addStageAt("render", 1);
     main_scene.getStage("render")->addSystem(engine::renderColorMeshes);
 
     main_scene.addResource(engine::Time{});
+    main_scene.addResource(engine::Input{});
     engine::Engine::run();
 }

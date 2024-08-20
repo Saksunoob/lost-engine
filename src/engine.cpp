@@ -39,30 +39,25 @@ void Engine::init(const char* title, IVector2 window_size) {
     
 }
 
-void Engine::run() {
-    bool quit = false;
-    SDL_Event event;
-    while (!quit) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                quit = true;
-            }
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WindowEventID::SDL_WINDOWEVENT_RESIZED) {
-                
-            }
-        }
-        newFrame();
+bool quit_engine = false;
 
+void Engine::run() {
+    SDL_Event event;
+    while (!quit_engine) {
+        newFrame();
         if (active_scene == nullptr) {
             Logger::logError("No active scene!");
             throw;
         }
-        
         Engine::active_scene->executeStages();
-        
         drawFrame();
     }
+    vkDeviceWaitIdle(device->device());
     SDL_Quit();
+}
+
+void Engine::quit() {
+    quit_engine = true;
 }
 
 void Engine::createCommandBuffers() {
