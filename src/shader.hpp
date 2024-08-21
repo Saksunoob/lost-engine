@@ -9,6 +9,24 @@
 namespace engine {
     class Shader;
 
+    class DescriptorPool {
+        const unsigned STARTING_POOL_SIZE = 16;
+
+        std::vector<std::vector<VkDescriptorPool>> pools;
+
+        unsigned currently_allocated = 0;
+        unsigned pool_size;
+        unsigned last_image;
+
+        inline unsigned getPoolIndex();
+        void createDescriptorPool(std::vector<VkDescriptorPool>& pool);
+
+        public:
+
+        DescriptorPool();
+        VkDescriptorSet createDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write);
+    };
+
     enum ShaderVarType {
         VAR_FLOAT = VK_FORMAT_R32_SFLOAT,
         VAR_INT = VK_FORMAT_R32_SINT,
@@ -137,6 +155,8 @@ namespace engine {
 
         VkDescriptorSetLayout descriptorSetLayout;
 
+        static DescriptorPool* descriptorPool;
+
         ShaderVariables variables;
 
         struct PerImageData {
@@ -161,7 +181,7 @@ namespace engine {
             }
 
             template <typename T>
-            void pushUniform(const T& uniform) {
+            void bindUniform(const T& uniform) {
                 ShaderUniformBuffer& buffer = perImageData[Engine::getCurrentSwapChainImage()].uniformBuffer;
 
                 buffer.bind(uniform);
@@ -172,15 +192,14 @@ namespace engine {
 
                 VkWriteDescriptorSet writeDescriptorSet = {};
                 writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                writeDescriptorSet.dstBinding = 0; // Binding location in the shader
+                writeDescriptorSet.dstBinding = 0;
                 writeDescriptorSet.dstArrayElement = 0;
                 writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 writeDescriptorSet.descriptorCount = 1;
                 writeDescriptorSet.pBufferInfo = &bufferInfo;
 
-                PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR =
-                    (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(Engine::getDevice().device(), "vkCmdPushDescriptorSetKHR");
-                vkCmdPushDescriptorSetKHR(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &writeDescriptorSet);
+                VkDescriptorSet descriptorSet = descriptorPool->createDescriptorSet(descriptorSetLayout, writeDescriptorSet);
+                vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
             }
 
             ShaderVertexBuffer& vertexBuffer() {

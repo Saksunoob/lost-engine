@@ -37,7 +37,7 @@ void engine::renderColorMeshes(Scene& scene) {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
             *colorMesh.Get<Color>()
         };
-        shader.pushUniform(data);
+        shader.bindUniform(data);
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
 }

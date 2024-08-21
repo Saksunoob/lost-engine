@@ -2,6 +2,76 @@
 
 namespace engine {
 
+    inline unsigned DescriptorPool::getPoolIndex() {
+        return std::log2(currently_allocated/STARTING_POOL_SIZE);
+    }
+
+    void DescriptorPool::createDescriptorPool(std::vector<VkDescriptorPool>& pool) {
+        unsigned size = (1 << pool.size()) * STARTING_POOL_SIZE;
+
+        VkDescriptorPoolSize pool_size = {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            size
+        };
+
+        VkDescriptorPoolCreateInfo createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        createInfo.maxSets = size;
+        createInfo.poolSizeCount = 1;
+        createInfo.pPoolSizes = &pool_size;
+        createInfo.pNext = nullptr;
+        createInfo.flags = 0;
+
+        VkDescriptorPool descriptorPool;
+
+        if (vkCreateDescriptorPool(Engine::getDevice().device(), &createInfo, nullptr, &descriptorPool)) {
+            Logger::logError("Failed to create descriptor pool");
+        }
+
+        pool.push_back(descriptorPool);
+        return;
+    }
+
+    DescriptorPool::DescriptorPool() : pools(Engine::getSwapChain()->imageCount()), pool_size(STARTING_POOL_SIZE) {
+        for (unsigned i = 0; i < pools.size(); i++) {
+            createDescriptorPool(pools[i]);
+        }
+    }
+
+    VkDescriptorSet DescriptorPool::createDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write) {
+        std::vector<VkDescriptorPool>& framePools = pools[Engine::getCurrentSwapChainImage()];
+
+        if (Engine::getCurrentSwapChainImage() != last_image) {
+            for (VkDescriptorPool pool : framePools) {
+                vkResetDescriptorPool(Engine::getDevice().device(), pool, 0);
+            }
+            last_image = Engine::getCurrentSwapChainImage();
+            currently_allocated = 0;
+        }
+
+        unsigned index = getPoolIndex();
+
+        if (index >= framePools.size()) {
+            createDescriptorPool(framePools);
+        }
+
+        VkDescriptorSetAllocateInfo setAllocInfo;
+        setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        setAllocInfo.descriptorSetCount = 1;
+        setAllocInfo.descriptorPool = framePools[index];
+        setAllocInfo.pSetLayouts = &set_layout;
+        setAllocInfo.pNext = nullptr;
+
+        VkDescriptorSet descriptor_set;
+        if (vkAllocateDescriptorSets(Engine::getDevice().device(), &setAllocInfo, &descriptor_set)) {
+            Logger::logError("Failed to allocate descriptor set");
+        }
+        write.dstSet = descriptor_set;
+        vkUpdateDescriptorSets(Engine::getDevice().device(), 1, &write, 0, nullptr);
+        currently_allocated += 1;
+        return descriptor_set;
+    }
+
     unsigned ShaderVariables::getTotalSize() {
         unsigned size = 0;
         for (int i = 0; i < types.size(); i++) {
@@ -61,8 +131,14 @@ namespace engine {
         return attributeDescriptions;
     }
 
+    DescriptorPool* Shader::descriptorPool = nullptr;
+
     Shader::Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize) :
         shaderPath(shaderPath), pushConstantSize(pushConstantSize), uniformSize(uniformSize), variables(variables) {
+
+        if (descriptorPool == nullptr) {
+            descriptorPool = new DescriptorPool();
+        }
 
         recreate();
         for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
@@ -93,7 +169,7 @@ namespace engine {
         uniformBufferBinding.pImmutableSamplers = nullptr;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+        layoutInfo.flags = 0;
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = 1;
         layoutInfo.pNext = nullptr;
@@ -110,7 +186,7 @@ namespace engine {
 
         auto pipelineConfig = PipelineConfig::defaultConfig(Engine::getSwapChain()->width(), Engine::getSwapChain()->height());
         pipelineConfig.renderPass = Engine::getSwapChain()->getRenderPass();
-        pipelineConfig.pipelineLayoutInfo.pushConstantRangeCount = 1;
+        pipelineConfig.pipelineLayoutInfo.pushConstantRangeCount = pushConstantSize != 0;
         pipelineConfig.pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
         pipelineConfig.pipelineLayoutInfo.setLayoutCount = 1;
