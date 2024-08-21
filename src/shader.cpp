@@ -205,5 +205,6 @@ namespace engine {
         pipeline->bind(Engine::getCurrentCommandBuffer());
         vertexBuffer().currentBufferIndex = 0;
         indexBuffer().currentBufferIndex = 0;
+        perImageData[Engine::getCurrentSwapChainImage()].uniformBuffer.currentBufferIndex = 0;
     }
 }
