@@ -3,7 +3,7 @@
 namespace engine {
 
     inline unsigned DescriptorPool::getPoolIndex() {
-        return std::log2(currently_allocated/STARTING_POOL_SIZE);
+        return std::log2(currently_allocated/STARTING_POOL_SIZE+1);
     }
 
     void DescriptorPool::createDescriptorPool(std::vector<VkDescriptorPool>& pool) {
