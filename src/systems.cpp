@@ -30,14 +30,15 @@ void engine::renderColorMeshes(Scene& scene) {
     shader.bind();
     for (unsigned i = 0; i < colorMeshes.size(); i++) {
         EntityComponents colorMesh = colorMeshes[i];
-        shader.vertexBuffer().bind(colorMesh.Get<Mesh>()->vertices);
-        shader.indexBuffer().bind(colorMesh.Get<Mesh>()->indices);
+        Mesh& mesh = *colorMesh.Get<Mesh>();
+        mesh.vertexBuffer->bind();
+        mesh.indexBuffer->bind();
 
         Data data {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
             *colorMesh.Get<Color>()
         };
-        shader.bindUniform(data);
+        shader.bindUniform(&data);
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
 }

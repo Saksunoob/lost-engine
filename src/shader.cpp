@@ -145,16 +145,13 @@ namespace engine {
     DescriptorPool* Shader::descriptorPool = nullptr;
 
     Shader::Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize) :
-        shaderPath(shaderPath), pushConstantSize(pushConstantSize), uniformSize(uniformSize), variables(variables) {
+        shaderPath(shaderPath), pushConstantSize(pushConstantSize), uniformSize(uniformSize), variables(variables), uniformBuffers(Engine::getSwapChain()->imageCount()) {
 
         if (descriptorPool == nullptr) {
             descriptorPool = new DescriptorPool();
         }
 
         recreate();
-        for (int i = 0; i < Engine::getSwapChain()->imageCount(); i++) {
-            perImageData.push_back(PerImageData(variables, uniformSize, descriptorSetLayout));
-        }
     }
 
     Shader::~Shader() {
@@ -214,8 +211,33 @@ namespace engine {
             recreate();
         }
         pipeline->bind(Engine::getCurrentCommandBuffer());
-        vertexBuffer().currentBufferIndex = 0;
-        indexBuffer().currentBufferIndex = 0;
-        perImageData[Engine::getCurrentSwapChainImage()].uniformBuffer.currentBufferIndex = 0;
+        uniformBuffers[Engine::getCurrentSwapChainImage()].clear();
+    }
+
+    void Shader::pushConstant(const void* data, unsigned size) {
+        vkCmdPushConstants(Engine::getCurrentCommandBuffer(), pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, size, data);
+    }
+
+    void Shader::bindUniform(const void* uniform) {
+        std::vector<std::unique_ptr<UniformBuffer>>& buffers = uniformBuffers[Engine::getCurrentSwapChainImage()];
+        buffers.emplace_back(std::make_unique<UniformBuffer>(uniformSize));
+        UniformBuffer& buffer = *buffers.at(buffers.size()-1).get();
+
+        buffer.setVector(uniform, 1);
+        VkDescriptorBufferInfo bufferInfo = {};
+        bufferInfo.buffer = buffer.buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = uniformSize;
+
+        VkWriteDescriptorSet writeDescriptorSet = {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstBinding = 0;
+        writeDescriptorSet.dstArrayElement = 0;
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.pBufferInfo = &bufferInfo;
+
+        VkDescriptorSet descriptorSet = descriptorPool->writeDescriptorSet(descriptorSetLayout, writeDescriptorSet);
+        vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
     }
 }

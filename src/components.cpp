@@ -2,61 +2,9 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include "vulkan/device.hpp"
+#include "shader.hpp"
 
 using namespace engine;
-
-Mesh::~Mesh() {
-    if (_device != nullptr) { // Check if any buffers have been created
-        vkDestroyBuffer(_device->device(), vertexBuffer, nullptr);
-        vkDestroyBuffer(_device->device(), indexBuffer, nullptr);
-
-        vkFreeMemory(_device->device(), vertexBufferMemory, nullptr);
-        vkFreeMemory(_device->device(), indexBufferMemory, nullptr);
-    }
-}
-
-void Mesh::createBuffers(Device& device) {
-    _device = &device;
-
-    // Vertex buffer
-    VkDeviceSize vertexbufferSize = sizeof(vertices[0]) * vertices.size();
-    device.createBuffer(vertexbufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        vertexBuffer, vertexBufferMemory);
-
-    void* data;
-    vkMapMemory(device.device(), vertexBufferMemory, 0, vertexbufferSize, 0, &data);
-    memcpy(data, vertices.data(), static_cast<size_t>(vertexbufferSize));
-    vkUnmapMemory(device.device(), vertexBufferMemory);
-    
-    // Index buffer
-    VkDeviceSize indexbufferSize = sizeof(indices[0]) * indices.size();
-    device.createBuffer(indexbufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        indexBuffer, indexBufferMemory);
-
-    vkMapMemory(device.device(), indexBufferMemory, 0, indexbufferSize, 0, &data);
-    memcpy(data, indices.data(), static_cast<size_t>(indexbufferSize));
-    vkUnmapMemory(device.device(), indexBufferMemory);
-}
-
-std::vector<VkVertexInputBindingDescription> Mesh::getBindingDescriptions() {
-    std::vector<VkVertexInputBindingDescription> bindingDescriptions(1);
-    bindingDescriptions[0].binding = 0;
-    bindingDescriptions[0].stride = sizeof(Vector2);
-    bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    return bindingDescriptions;
-}
-
-std::vector<VkVertexInputAttributeDescription> Mesh::getAttributeDescriptions() {
-    std::vector<VkVertexInputAttributeDescription> attributeDescriptions(1);
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].offset = 0;
-
-    return attributeDescriptions;
-}
 
 glm::mat4 Transform::getTransformationMatrix() const {
     glm::mat4 matrix = glm::mat4(1);
@@ -73,4 +21,35 @@ glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 windo
     matrix = glm::scale(matrix, glm::vec3(window_size.x/2.0, window_size.y/2.0, 1.0));
 
     return glm::inverse(matrix);
+}
+
+Mesh::Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer->setVector(vertices.data(), vertices.size());
+
+    indexBuffer = new IndexBuffer(sizeof(unsigned));
+    indexBuffer->setVector(indices.data(), indices.size());
+}
+
+Mesh::Mesh(const Mesh& mesh) : vertices(mesh.vertices), indices(mesh.indices) {
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer->setVector(vertices.data(), vertices.size());
+
+    indexBuffer = new IndexBuffer(sizeof(unsigned));
+    indexBuffer->setVector(indices.data(), indices.size());
+}
+
+Mesh::Mesh(Mesh&& mesh) : vertices(mesh.vertices), indices(mesh.indices), vertexBuffer(mesh.vertexBuffer), indexBuffer(mesh.indexBuffer) {
+    mesh.vertexBuffer = nullptr;
+    mesh.indexBuffer = nullptr;
+}
+
+Mesh::~Mesh()  {
+    Logger::log("Mesh destructor");
+    if (vertexBuffer) {
+        delete vertexBuffer;
+    }
+    if (indexBuffer) {
+        delete indexBuffer;
+    }
 }

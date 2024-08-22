@@ -68,97 +68,78 @@ namespace engine {
         std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
     };
     template <int UsageFlag>
-    class ShaderBuffer {
+    class Buffer {
         size_t item_size;
+        
+        VkDeviceMemory memory = nullptr;
+        unsigned bindingSize = 0;
 
         static unsigned getVarTypeSize(ShaderVarType type);
 
         public:
-            ShaderBuffer(size_t item_size) : item_size(item_size) {}
+            VkBuffer buffer = nullptr;
 
-            ~ShaderBuffer() {
+            Buffer(size_t item_size) : item_size(item_size) {}
+
+            //Buffer(Buffer&) = delete;
+            Buffer operator=(Buffer&) = delete;
+
+            ~Buffer() {
                 VkDevice device = Engine::getDevice().device();
-                for (VkBuffer buffer : buffers) {
-                    vkDestroyBuffer(device, buffer, nullptr);
+                if (buffer == nullptr) {
+                    Logger::logWarning("destroying null buffer");
                 }
-                for (VkDeviceMemory memory : memories) {
-                    vkFreeMemory(device, memory, nullptr);
-                }
+                vkDestroyBuffer(device, buffer, nullptr);
+                vkFreeMemory(device, memory, nullptr);
             }
 
-            VkBuffer getLast() {
-                return buffers[currentBufferIndex-1];
+            virtual void bind()=0;
+
+            inline void set(const void *data) {
+                setVector(data, 1);
             }
 
-            template <typename T>
-            void bind(T) {};
-            
-            protected:
-                unsigned currentBufferIndex = 0;
-                std::vector<VkBuffer> buffers;
-                std::vector<VkDeviceMemory> memories;
-                unsigned bindingSize = 0;
+            void setVector(const void *data, size_t size) {
+                Device& device = Engine::getDevice();
+                VkDeviceSize bufferSize = size * item_size;
 
-                void set(const void *data, size_t size) {
-                    Device& device = Engine::getDevice();
-
-                    if (buffers.size() <= currentBufferIndex) {
-                        buffers.resize(currentBufferIndex+1);
-                        memories.resize(currentBufferIndex+1);
-                    }
-
-                    VkBuffer& buffer = buffers[currentBufferIndex];
-                    VkDeviceMemory& memory = memories[currentBufferIndex];
-
-                    if (buffer != nullptr) {
-                        vkDestroyBuffer(device.device(), buffer, nullptr);
-                        vkFreeMemory(device.device(), memory, nullptr);
-                    }
-
-                    VkDeviceSize bufferSize = size;
+                if (buffer == nullptr) {
                     device.createBuffer(bufferSize, UsageFlag,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        buffer, memory);
-                    void* data_loc;
-                    vkMapMemory(device.device(), memory, 0, bufferSize, 0, &data_loc);
-                    memcpy(data_loc, data, size);
-                    vkUnmapMemory(device.device(), memory);
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    buffer, memory);
                 }
 
-            friend Shader;
+                void* data_loc;
+                vkMapMemory(device.device(), memory, 0, bufferSize, 0, &data_loc);
+                memcpy(data_loc, data, bufferSize);
+                vkUnmapMemory(device.device(), memory);
+            }
     };
-    class ShaderVertexBuffer : public ShaderBuffer<VK_BUFFER_USAGE_VERTEX_BUFFER_BIT> {
-        using ShaderBuffer::ShaderBuffer;
+    class VertexBuffer : public Buffer<VK_BUFFER_USAGE_VERTEX_BUFFER_BIT> {
+        using Buffer::Buffer;
 
         public:
-            template <typename T>
-            void bind(const std::vector<T>& vertices) {
-                set(vertices.data(), vertices.size() * sizeof(T));
+            void bind() override {
                 VkDeviceSize offset[] = {0};
-                vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, 1, &buffers[currentBufferIndex], offset);
-                currentBufferIndex++;
+                vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, 1, &buffer, offset);
             }
     };
-    class ShaderIndexBuffer : public ShaderBuffer<VK_BUFFER_USAGE_INDEX_BUFFER_BIT> {
-        using ShaderBuffer::ShaderBuffer;
+    class IndexBuffer : public Buffer<VK_BUFFER_USAGE_INDEX_BUFFER_BIT> {
+        using Buffer::Buffer;
 
         public:
-            void bind(const std::vector<unsigned>& indices) {
-                set(indices.data(), indices.size() * sizeof(unsigned));
-                vkCmdBindIndexBuffer(Engine::getCurrentCommandBuffer(), buffers[currentBufferIndex], 0, VK_INDEX_TYPE_UINT32);
-                currentBufferIndex++;
+            void bind() override {
+                vkCmdBindIndexBuffer(Engine::getCurrentCommandBuffer(), buffer, 0, VK_INDEX_TYPE_UINT32);
             }
     };
 
-    class ShaderUniformBuffer : public ShaderBuffer<VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT> {
-        using ShaderBuffer::ShaderBuffer;
+    class UniformBuffer : public Buffer<VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT> {
+        using Buffer::Buffer;
 
-        public:
-            template <typename T>
-            void bind(const T& uniform) {
-                set(&uniform, sizeof(T));
-                currentBufferIndex++;
-            }
+        void bind() override {
+            Logger::logWarning("Calling bind() on uniform buffer does nothing!");
+            return;
+        }
     };
 
     class Shader {
@@ -173,17 +154,7 @@ namespace engine {
         static DescriptorPool* descriptorPool;
 
         ShaderVariables variables;
-
-        struct PerImageData {
-            ShaderVertexBuffer vertexBuffer;
-            ShaderIndexBuffer indexBuffer;
-            ShaderUniformBuffer uniformBuffer;
-
-            PerImageData(ShaderVariables variables, unsigned uniformSize, VkDescriptorSetLayout layout) : 
-            vertexBuffer(variables.getTotalSize()), indexBuffer(sizeof(unsigned)), uniformBuffer(uniformSize) {};
-        };
-
-        std::vector<PerImageData> perImageData;
+        std::vector<std::vector<std::unique_ptr<UniformBuffer>>> uniformBuffers;
 
         public:
             Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize);
@@ -191,37 +162,7 @@ namespace engine {
 
             void recreate();
             void bind();
-            void pushConstant(const void* data, unsigned size) {
-                vkCmdPushConstants(Engine::getCurrentCommandBuffer(), pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, size, data);
-            }
-
-            template <typename T>
-            void bindUniform(const T& uniform) {
-                ShaderUniformBuffer& buffer = perImageData[Engine::getCurrentSwapChainImage()].uniformBuffer;
-
-                buffer.bind(uniform);
-                VkDescriptorBufferInfo bufferInfo = {};
-                bufferInfo.buffer = buffer.getLast();;
-                bufferInfo.offset = 0;
-                bufferInfo.range = sizeof(T);
-
-                VkWriteDescriptorSet writeDescriptorSet = {};
-                writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                writeDescriptorSet.dstBinding = 0;
-                writeDescriptorSet.dstArrayElement = 0;
-                writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                writeDescriptorSet.descriptorCount = 1;
-                writeDescriptorSet.pBufferInfo = &bufferInfo;
-
-                VkDescriptorSet descriptorSet = descriptorPool->writeDescriptorSet(descriptorSetLayout, writeDescriptorSet);
-                vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-            }
-
-            ShaderVertexBuffer& vertexBuffer() {
-                return perImageData[Engine::getCurrentSwapChainImage()].vertexBuffer;
-            }
-            ShaderIndexBuffer& indexBuffer() {
-                return perImageData[Engine::getCurrentSwapChainImage()].indexBuffer;
-            }
+            void pushConstant(const void* data, unsigned size);
+            void bindUniform(const void* uniform);
     };
 }

@@ -91,25 +91,22 @@ namespace engine {
         GlobalTransform(Vector2 position, Vector2 scale, double rotation): Transform(position, scale, rotation) {};
     };
 
+    class VertexBuffer;
+    class IndexBuffer;
+
     struct Mesh {
         std::vector<Vector2> vertices;
         std::vector<unsigned> indices;
 
-        VkBuffer vertexBuffer = nullptr;
-        VkBuffer indexBuffer = nullptr;
+        VertexBuffer* vertexBuffer = nullptr;
+        IndexBuffer* indexBuffer = nullptr;
 
-        Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {};
+        Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices);
+
+        Mesh(const Mesh&);
+        Mesh(Mesh&&);
+
         ~Mesh();
-
-        void createBuffers(Device& device);
-
-        static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
-        static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
-
-        private:
-            VkDeviceMemory vertexBufferMemory = nullptr;
-            VkDeviceMemory indexBufferMemory = nullptr;
-            Device* _device = nullptr;
     };
 
     struct Camera {
