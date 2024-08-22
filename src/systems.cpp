@@ -45,6 +45,7 @@ void engine::renderColorMeshes(Scene& scene) {
 void engine::timeSystem(Scene& scene) {
     Time& time = scene.getResource<Time>();
     time.newFrame();
+    Logger::log("FPS: " + std::to_string(1/time.deltaTime()));
 }
 
 void engine::pollSDLEvents(Scene& scene) {

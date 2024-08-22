@@ -32,26 +32,34 @@ namespace engine {
         return;
     }
 
-    DescriptorPool::DescriptorPool() : pools(Engine::getSwapChain()->imageCount()), pool_size(STARTING_POOL_SIZE) {
+    DescriptorPool::DescriptorPool() : pools(Engine::getSwapChain()->imageCount()), pool_size(STARTING_POOL_SIZE), reserves(Engine::getSwapChain()->imageCount()) {
         for (unsigned i = 0; i < pools.size(); i++) {
             createDescriptorPool(pools[i]);
         }
     }
 
-    VkDescriptorSet DescriptorPool::createDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write) {
+    VkDescriptorSet DescriptorPool::writeDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write) {
         std::vector<VkDescriptorPool>& framePools = pools[Engine::getCurrentSwapChainImage()];
 
         if (Engine::getCurrentSwapChainImage() != last_image) {
-            for (VkDescriptorPool pool : framePools) {
-                vkResetDescriptorPool(Engine::getDevice().device(), pool, 0);
+            for (auto& [set, reserve] : reserves[Engine::getCurrentSwapChainImage()]) {
+                reserve.written = 0;
             }
             last_image = Engine::getCurrentSwapChainImage();
-            currently_allocated = 0;
+        }
+
+        Reserve& reserve = reserves[Engine::getCurrentSwapChainImage()][set_layout];
+
+        if (!reserve.full()) {
+            VkDescriptorSet set = reserve.next();
+            write.dstSet = set;
+            vkUpdateDescriptorSets(Engine::getDevice().device(), 1, &write, 0, nullptr);
+            return set;
         }
 
         unsigned index = getPoolIndex();
 
-        if (index >= framePools.size()) {
+        while (index >= framePools.size()) {
             createDescriptorPool(framePools);
         }
 
@@ -66,9 +74,12 @@ namespace engine {
         if (vkAllocateDescriptorSets(Engine::getDevice().device(), &setAllocInfo, &descriptor_set)) {
             Logger::logError("Failed to allocate descriptor set");
         }
+        currently_allocated += 1;
+        reserve.sets.push_back(descriptor_set);
+        
         write.dstSet = descriptor_set;
         vkUpdateDescriptorSets(Engine::getDevice().device(), 1, &write, 0, nullptr);
-        currently_allocated += 1;
+        reserve.written += 1;
         return descriptor_set;
     }
 

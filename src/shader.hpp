@@ -14,6 +14,21 @@ namespace engine {
 
         std::vector<std::vector<VkDescriptorPool>> pools;
 
+        struct Reserve {
+            unsigned written;
+            std::vector<VkDescriptorSet> sets;
+
+            bool full() {
+                return written >= sets.size();
+            }
+
+            VkDescriptorSet next() {
+                return sets[written++];
+            }
+        };
+
+        std::vector<std::unordered_map<VkDescriptorSetLayout, Reserve>> reserves;
+
         unsigned currently_allocated = 0;
         unsigned pool_size;
         unsigned last_image;
@@ -24,7 +39,7 @@ namespace engine {
         public:
 
         DescriptorPool();
-        VkDescriptorSet createDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write);
+        VkDescriptorSet writeDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write);
     };
 
     enum ShaderVarType {
@@ -198,7 +213,7 @@ namespace engine {
                 writeDescriptorSet.descriptorCount = 1;
                 writeDescriptorSet.pBufferInfo = &bufferInfo;
 
-                VkDescriptorSet descriptorSet = descriptorPool->createDescriptorSet(descriptorSetLayout, writeDescriptorSet);
+                VkDescriptorSet descriptorSet = descriptorPool->writeDescriptorSet(descriptorSetLayout, writeDescriptorSet);
                 vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
             }
 
