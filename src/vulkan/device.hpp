@@ -70,6 +70,7 @@ class Device {
     Device(Device&&) = delete;
 
     VkCommandPool getCommandPool() { return commandPool; }
+    VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
     VkDevice device() { return device_; }
     VkSurfaceKHR surface() { return surface_; }
     VkQueue graphicsQueue() { return graphicsQueue_; }

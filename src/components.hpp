@@ -116,4 +116,30 @@ namespace engine {
 
         static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
     };
+
+    struct Texture {
+    public:
+        Texture(const std::string &filepath);
+        ~Texture();
+
+        Texture(const Texture &);
+        Texture(Texture &&);
+
+        VkSampler getSampler() { return sampler; }
+        VkImageView getImageView() { return imageView; }
+        VkImageLayout getImageLayout() { return imageLayout; }
+    private:
+        void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
+        void generateMipmaps();
+
+        int width, height, mipLevels;
+        const std::string& filepath;
+
+        VkImage image;
+        VkDeviceMemory imageMemory;
+        VkImageView imageView;
+        VkSampler sampler;
+        VkFormat imageFormat;
+        VkImageLayout imageLayout;
+    };
 }
