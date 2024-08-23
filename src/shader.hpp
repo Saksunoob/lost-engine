@@ -148,6 +148,7 @@ namespace engine {
         Pipeline* pipeline;
         unsigned pushConstantSize;
         unsigned uniformSize;
+        unsigned uniformCounter;
 
         VkDescriptorSetLayout descriptorSetLayout;
 

@@ -211,7 +211,7 @@ namespace engine {
             recreate();
         }
         pipeline->bind(Engine::getCurrentCommandBuffer());
-        uniformBuffers[Engine::getCurrentSwapChainImage()].clear();
+        uniformCounter = 0;
     }
 
     void Shader::pushConstant(const void* data, unsigned size) {
@@ -220,8 +220,11 @@ namespace engine {
 
     void Shader::bindUniform(const void* uniform) {
         std::vector<std::unique_ptr<UniformBuffer>>& buffers = uniformBuffers[Engine::getCurrentSwapChainImage()];
-        buffers.emplace_back(std::make_unique<UniformBuffer>(uniformSize));
-        UniformBuffer& buffer = *buffers.at(buffers.size()-1).get();
+        if (uniformCounter == buffers.size()) {
+            buffers.emplace_back(std::make_unique<UniformBuffer>(uniformSize));
+        }
+        
+        UniformBuffer& buffer = *buffers.at(uniformCounter).get();
 
         buffer.setVector(uniform, 1);
         VkDescriptorBufferInfo bufferInfo = {};
@@ -239,5 +242,8 @@ namespace engine {
 
         VkDescriptorSet descriptorSet = descriptorPool->writeDescriptorSet(descriptorSetLayout, writeDescriptorSet);
         vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+
+        uniformCounter++;
+        return;
     }
 }

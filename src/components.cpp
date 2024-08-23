@@ -45,7 +45,6 @@ Mesh::Mesh(Mesh&& mesh) : vertices(mesh.vertices), indices(mesh.indices), vertex
 }
 
 Mesh::~Mesh()  {
-    Logger::log("Mesh destructor");
     if (vertexBuffer) {
         delete vertexBuffer;
     }
