@@ -49,7 +49,7 @@ void engine::renderUVMeshes(Scene& scene) {
         glm::mat4 matrix;
     };
 
-    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();
     unsigned main_camera;
@@ -63,7 +63,7 @@ void engine::renderUVMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Texture>();
+    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, UVs, Texture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
@@ -72,7 +72,7 @@ void engine::renderUVMeshes(Scene& scene) {
     for (unsigned i = 0; i < colorMeshes.size(); i++) {
         EntityComponents colorMesh = colorMeshes[i];
         Mesh& mesh = *colorMesh.Get<Mesh>();
-        mesh.vertexBuffer->bind();
+        shader.bindVertexBuffers({mesh.vertexBuffer, colorMesh.Get<UVs>()->vertexBuffer});
         mesh.indexBuffer->bind();
 
         Data data {

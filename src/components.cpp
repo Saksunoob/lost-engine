@@ -56,6 +56,26 @@ Mesh::~Mesh()  {
     }
 }
 
+UVs::UVs(std::vector<Vector2> uvs) : uvs(uvs) {
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer->setVector(uvs.data(), uvs.size());
+}
+
+UVs::UVs(const UVs& other) : uvs(other.uvs) {
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer->setVector(uvs.data(), uvs.size());
+}
+
+UVs::UVs(UVs&& other) : uvs(other.uvs), vertexBuffer(other.vertexBuffer) {
+    other.vertexBuffer = nullptr;
+}
+
+UVs::~UVs()  {
+    if (vertexBuffer) {
+        delete vertexBuffer;
+    }
+}
+
 Texture::Texture(const std::string &filepath) : filepath(filepath) {
     int channels;
     int m_BytesPerPixel;

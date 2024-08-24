@@ -109,6 +109,19 @@ namespace engine {
         ~Mesh();
     };
 
+    struct UVs {
+        std::vector<Vector2> uvs;
+
+        VertexBuffer* vertexBuffer = nullptr;
+
+        UVs(std::vector<Vector2> uvs);
+
+        UVs(const UVs&);
+        UVs(UVs&&);
+
+        ~UVs();
+    };
+
     struct Camera {
         bool main;
 

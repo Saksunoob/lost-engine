@@ -162,6 +162,7 @@ namespace engine {
                 attributeDescriptions[location].offset = offset;
 
                 offset += getVariableSize(b, v);
+                location++;
             }
         }
         return attributeDescriptions;
@@ -239,6 +240,15 @@ namespace engine {
         }
         pipeline->bind(Engine::getCurrentCommandBuffer());
         uniformCounter = 0;
+    }
+
+    void Shader::bindVertexBuffers(std::vector<Buffer*> buffers) {
+        std::vector<VkBuffer> vk_buffers(buffers.size());
+        for (int i = 0; i < buffers.size(); i++) {
+            vk_buffers[i] = buffers[i]->buffer;
+        }
+        std::vector<VkDeviceSize> offsets(buffers.size(), 0);
+        vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, buffers.size(), vk_buffers.data(), offsets.data());
     }
 
     void Shader::pushConstant(const void* data, unsigned size) {

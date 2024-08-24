@@ -14,6 +14,12 @@ int main() {
         {0.5, -0.5},
         {-0.5, 0.5}
     };
+    std::vector<engine::Vector2> uvs {
+        {1, 1},
+        {0, 0},
+        {1, 0},
+        {0, 1}
+    };
     std::vector<unsigned> indices = {
         0, 1, 2, 0, 3, 1
     };
@@ -26,7 +32,8 @@ int main() {
 
     engine::Entity square2 = main_scene.createEntity();
     main_scene.addComponent(square2, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), -1));
+    main_scene.addComponent(square2, engine::UVs(uvs));
+    main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), 0));
     main_scene.addComponent(square2, engine::Texture{"../src/textures/test.png"});
 
     main_scene.addStageAt("preupdate", 0);
