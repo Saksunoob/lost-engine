@@ -84,12 +84,13 @@ namespace engine {
         VAR_UVEC4 = VK_FORMAT_R32G32B32A32_UINT
     };
     struct ShaderVariables {
-        std::vector<ShaderVarType> types;
+        std::vector<std::vector<ShaderVarType>> types;
 
-        ShaderVariables(std::vector<ShaderVarType> types) : types(types) {};
+        ShaderVariables(std::vector<std::vector<ShaderVarType>> types) : types(types) {};
+        ShaderVariables(std::initializer_list<std::vector<ShaderVarType>> types) : types(types) {};
 
-        unsigned getTotalSize();
-        unsigned getVariableSize(unsigned index);
+        unsigned getBindingSize(unsigned binding);
+        unsigned getVariableSize(unsigned binding, unsigned index);
 
         std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
         std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();

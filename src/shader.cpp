@@ -95,16 +95,16 @@ namespace engine {
         return;
     }
 
-    unsigned ShaderVariables::getTotalSize() {
+    unsigned ShaderVariables::getBindingSize(unsigned binding) {
         unsigned size = 0;
-        for (int i = 0; i < types.size(); i++) {
-            size += getVariableSize(i);
+        for (int i = 0; i < types.at(binding).size(); i++) {
+            size += getVariableSize(binding, i);
         }
         return size;
     }
 
-    unsigned ShaderVariables::getVariableSize(unsigned index) {
-        switch (types[index])
+    unsigned ShaderVariables::getVariableSize(unsigned binding, unsigned index) {
+        switch (types.at(binding)[index])
         {
             case VAR_FLOAT:
                 return 4;
@@ -137,22 +137,32 @@ namespace engine {
     }
 
     std::vector<VkVertexInputBindingDescription> ShaderVariables::getBindingDescriptions() {
-        VkVertexInputBindingDescription bindingDescription;
-        bindingDescription.binding = 0;
-        bindingDescription.stride = getTotalSize();
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return {bindingDescription};
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions(types.size());
+        for (unsigned i = 0; i < types.size(); i++) {
+            bindingDescriptions[i].binding = i;
+            bindingDescriptions[i].stride = getBindingSize(i);
+            bindingDescriptions[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        }
+        
+        return bindingDescriptions;
     }
     std::vector<VkVertexInputAttributeDescription> ShaderVariables::getAttributeDescriptions() {
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(types.size());
-        unsigned offset = 0;
-        for (unsigned i = 0; i < types.size(); i++) {
-            attributeDescriptions[i].binding = 0;
-            attributeDescriptions[i].format = static_cast<VkFormat>(types[i]);
-            attributeDescriptions[i].location = i;
-            attributeDescriptions[i].offset = offset;
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
+        unsigned location = 0;
 
-            offset += getVariableSize(i);
+        for (unsigned b = 0; b < types.size(); b++) {
+            unsigned offset = 0;
+
+            for (unsigned v = 0; v < types[b].size(); v++) {
+                attributeDescriptions.push_back({});
+
+                attributeDescriptions[location].binding = b;
+                attributeDescriptions[location].format = static_cast<VkFormat>(types[b][v]);
+                attributeDescriptions[location].location = location;
+                attributeDescriptions[location].offset = offset;
+
+                offset += getVariableSize(b, v);
+            }
         }
         return attributeDescriptions;
     }

@@ -7,7 +7,7 @@ void engine::renderColorMeshes(Scene& scene) {
         glm::mat4 matrix;
         Color color;
     };
-    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();
     unsigned main_camera;
@@ -21,7 +21,7 @@ void engine::renderColorMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Color, Texture>();
+    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Color>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
@@ -36,6 +36,47 @@ void engine::renderColorMeshes(Scene& scene) {
         Data data {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
             *colorMesh.Get<Color>()
+        };
+        shader.writeUniformBinding(0, 0, &data);
+        shader.bindSet(0);
+        
+        vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
+    }
+}
+
+void engine::renderUVMeshes(Scene& scene) {
+    struct Data {
+        glm::mat4 matrix;
+    };
+
+    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
+    Component<Camera>& cameras = validCameras.Get<Camera>();
+    unsigned main_camera;
+    for (int i = 0; i < cameras.size(); i++) {
+        if (cameras[i]->main) {
+            main_camera = i;
+            break;    
+        }
+        if (i+1 == cameras.size()) {
+            Logger::logWarning("No main camera");
+            return;
+        }
+    }
+    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Texture>();
+
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
+    shader.bind();
+    for (unsigned i = 0; i < colorMeshes.size(); i++) {
+        EntityComponents colorMesh = colorMeshes[i];
+        Mesh& mesh = *colorMesh.Get<Mesh>();
+        mesh.vertexBuffer->bind();
+        mesh.indexBuffer->bind();
+
+        Data data {
+            proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix()
         };
         shader.writeUniformBinding(0, 0, &data);
         shader.writeSamplerBinding(0, 1, *colorMesh.Get<Texture>());

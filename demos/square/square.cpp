@@ -26,7 +26,6 @@ int main() {
 
     engine::Entity square2 = main_scene.createEntity();
     main_scene.addComponent(square2, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square2, engine::Color(0, 1, 0));
     main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), -1));
     main_scene.addComponent(square2, engine::Texture{"../src/textures/test.png"});
 
@@ -35,6 +34,7 @@ int main() {
     main_scene.getStage("preupdate")->addSystem(engine::pollSDLEvents);
     main_scene.addStageAt("render", 1);
     main_scene.getStage("render")->addSystem(engine::renderColorMeshes);
+    main_scene.getStage("render")->addSystem(engine::renderUVMeshes);
 
     main_scene.addResource(engine::Time{});
     main_scene.addResource(engine::Input{});

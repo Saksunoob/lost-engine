@@ -7,10 +7,6 @@ layout(set=0, binding=0) uniform Data {
 	vec4 color;
 } data;
 
-layout(set=0, binding=1) uniform sampler2D texture_sampler;
-
-layout (location = 0) in vec2 UV;
-
 void main() {
-	outColor = texture(texture_sampler, UV);
+	outColor = data.color;
 }
