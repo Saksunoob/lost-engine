@@ -1,5 +1,7 @@
 #include "engine.hpp"
 #include "scene.hpp"
+#include "systems.hpp"
+#include "resources.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/swap_chain.hpp"
 #include "vulkan/pipeline.hpp"
@@ -137,12 +139,26 @@ void Engine::drawFrame() {
     }
 }
 
-Scene& Engine::addScene(std::string name) {
-    scenes[name] =Scene(name);
+Scene& Engine::addScene(std::string name, bool with_defaults) {
+    scenes[name] = Scene(name);
+    Scene& scene = scenes[name];
     if (active_scene == nullptr) {
-        active_scene = &scenes[name];
+        active_scene = &scene;
     }
-    return scenes[name];
+    if (with_defaults) {
+        scene.addStageAt("init_frame", 0);
+        scene.addStageAfter("render", "init_frame");
+
+        scene.getStage("init_frame")->addSystem(timeSystem);
+        scene.getStage("init_frame")->addSystem(pollSDLEvents);
+
+        scene.getStage("render")->addSystem(engine::renderColorMeshes);
+        scene.getStage("render")->addSystem(engine::renderUVMeshes);
+
+        scene.addResource(Time{});
+        scene.addResource(Input{});
+    }
+    return scene;
 }
 void Engine::changeScene(std::string scene_name) {
     auto scene_index = scenes.find(scene_name);

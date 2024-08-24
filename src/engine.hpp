@@ -34,7 +34,7 @@ namespace engine {
             static void init(const char* title, IVector2 window_size);
             static void run();
             static void quit();
-            static Scene& addScene(std::string name);
+            static Scene& addScene(std::string name, bool with_defaults);
             static void changeScene(std::string scene_name);
             static Device& getDevice();
             static IVector2 getWindowSize() {return window_size;};

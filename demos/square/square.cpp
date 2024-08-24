@@ -2,7 +2,7 @@
 
 int main() {
     engine::Engine::init("Square", engine::IVector2(800, 600));
-    engine::Scene& main_scene = engine::Engine::addScene("main");
+    engine::Scene& main_scene = engine::Engine::addScene("main", true);
 
     engine::Entity camera = main_scene.createEntity();
     main_scene.addComponent(camera, engine::Camera(true));
@@ -36,14 +36,5 @@ int main() {
     main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), 0));
     main_scene.addComponent(square2, engine::Texture{"../src/textures/test.png"});
 
-    main_scene.addStageAt("preupdate", 0);
-    main_scene.getStage("preupdate")->addSystem(engine::timeSystem);
-    main_scene.getStage("preupdate")->addSystem(engine::pollSDLEvents);
-    main_scene.addStageAt("render", 1);
-    main_scene.getStage("render")->addSystem(engine::renderColorMeshes);
-    main_scene.getStage("render")->addSystem(engine::renderUVMeshes);
-
-    main_scene.addResource(engine::Time{});
-    main_scene.addResource(engine::Input{});
     engine::Engine::run();
 }
