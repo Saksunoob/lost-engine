@@ -255,7 +255,7 @@ namespace engine {
         vkCmdPushConstants(Engine::getCurrentCommandBuffer(), pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, size, data);
     }
 
-    void Shader::writeSamplerBinding(unsigned set, unsigned binding, Texture& texture) {
+    void Shader::writeSamplerBinding(unsigned set, unsigned binding, TextureData& texture) {
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = texture.getImageLayout();
         imageInfo.imageView = texture.getImageView();

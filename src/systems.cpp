@@ -1,6 +1,7 @@
 #include "systems.hpp"
 #include "resources.hpp"
 #include "buffer.hpp"
+#include <chrono>
 
 void engine::renderColorMeshes(Scene& scene) {
     struct Data {
@@ -79,7 +80,7 @@ void engine::renderUVMeshes(Scene& scene) {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix()
         };
         shader.writeUniformBinding(0, 0, &data);
-        shader.writeSamplerBinding(0, 1, *colorMesh.Get<Texture>());
+        shader.writeSamplerBinding(0, 1, colorMesh.Get<Texture>()->getData());
         shader.bindSet(0);
         
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);

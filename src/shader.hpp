@@ -150,7 +150,7 @@ namespace engine {
             void bindVertexBuffers(std::vector<Buffer*> buffers);
 
             void pushConstant(const void* data, unsigned size);
-            void writeSamplerBinding(unsigned set, unsigned binding, Texture& texture);
+            void writeSamplerBinding(unsigned set, unsigned binding, TextureData& texture);
             void writeUniformBinding(unsigned set, unsigned binding, const void* uniform);
 
             void bindSet(unsigned set);

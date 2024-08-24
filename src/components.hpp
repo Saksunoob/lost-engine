@@ -130,13 +130,13 @@ namespace engine {
         static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
     };
 
-    struct Texture {
+    struct TextureData {
     public:
-        Texture(const std::string &filepath);
-        ~Texture();
+        TextureData(const std::string &filepath);
+        ~TextureData();
 
-        Texture(const Texture &);
-        Texture(Texture &&);
+        TextureData(const TextureData &);
+        TextureData(TextureData &&);
 
         VkSampler getSampler() { return sampler; }
         VkImageView getImageView() { return imageView; }
@@ -154,5 +154,17 @@ namespace engine {
         VkSampler sampler;
         VkFormat imageFormat;
         VkImageLayout imageLayout;
+    };
+
+    struct Texture {
+    public:
+        Texture(const std::string &filepath);
+
+        TextureData& getData() { return *data.get(); }
+    private:
+        void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
+        void generateMipmaps();
+
+        std::shared_ptr<TextureData> data;
     };
 }

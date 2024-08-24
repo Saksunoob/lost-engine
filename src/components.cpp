@@ -76,7 +76,7 @@ UVs::~UVs()  {
     }
 }
 
-Texture::Texture(const std::string &filepath) : filepath(filepath) {
+TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
     int channels;
     int m_BytesPerPixel;
 
@@ -148,10 +148,10 @@ Texture::Texture(const std::string &filepath) : filepath(filepath) {
     stbi_image_free(data);
 }
 
-Texture::Texture(const Texture &other) : Texture(other.filepath) {
+TextureData::TextureData(const TextureData &other) : TextureData(other.filepath) {
 }
 
-Texture::Texture(Texture &&other) : filepath(other.filepath), width(other.width), height(other.height), mipLevels(other.mipLevels),
+TextureData::TextureData(TextureData &&other) : filepath(other.filepath), width(other.width), height(other.height), mipLevels(other.mipLevels),
     image(other.image), imageMemory(other.imageMemory), imageView(other.imageView), sampler(other.sampler), imageFormat(other.imageFormat), imageLayout(other.imageLayout) {
     other.image = nullptr;
     other.imageMemory = nullptr;
@@ -159,7 +159,7 @@ Texture::Texture(Texture &&other) : filepath(other.filepath), width(other.width)
     other.sampler = nullptr;
 }
 
-Texture::~Texture() {
+TextureData::~TextureData() {
     Device& device = Engine::getDevice();
     if (image) {
         vkDestroyImage(device.device(), image, nullptr);
@@ -175,7 +175,7 @@ Texture::~Texture() {
     }
 }
 
-void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
+void TextureData::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
     Device& device = Engine::getDevice();
     VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();
 
@@ -218,7 +218,11 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
     device.endSingleTimeCommands(commandBuffer);
 }
 
-void Texture::generateMipmaps() {
+Texture::Texture(const std::string &filepath) {
+    data = std::shared_ptr<TextureData>(new TextureData(filepath));
+}
+
+void TextureData::generateMipmaps() {
     Device& device = Engine::getDevice();
     VkFormatProperties formatProperties;
     vkGetPhysicalDeviceFormatProperties(device.getPhysicalDevice(), imageFormat, &formatProperties);
