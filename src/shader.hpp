@@ -12,18 +12,44 @@ namespace engine {
     class DescriptorPool {
         const unsigned STARTING_POOL_SIZE = 16;
 
+        static const std::vector<VkDescriptorType> types;
+
         std::vector<std::vector<VkDescriptorPool>> pools;
 
         struct Reserve {
-            unsigned written;
-            std::vector<VkDescriptorSet> sets;
+            struct Sets {
+                std::vector<VkDescriptorSet> sets; // One per set in pipeline
+
+                void push(VkDescriptorSet set, unsigned set_index) {
+                    if (sets.size() <= set_index) {
+                        sets.resize(set_index+1);
+                    }
+                    sets[set_index] = set;
+                }
+            };
+            
+            unsigned bound;
+            std::vector<Sets> sets; // One per draw call
 
             bool full() {
-                return written >= sets.size();
+                return bound >= sets.size();
             }
 
-            VkDescriptorSet next() {
-                return sets[written++];
+            VkDescriptorSet current(unsigned set_index) {
+                return sets.at(bound).sets.at(set_index);
+            }
+
+            void restart() {
+                bound = 0;
+                return;
+            }
+
+            void push(VkDescriptorSet set, unsigned set_index) {
+                if (sets.size() <= bound) {
+                    sets.push_back({});
+                }
+                sets[sets.size()-1].push(set, set_index);
+                return;
             }
         };
 
@@ -39,7 +65,8 @@ namespace engine {
         public:
 
         DescriptorPool();
-        VkDescriptorSet writeDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write);
+        VkDescriptorSet writeDescriptor(VkDescriptorSetLayout set_layout, unsigned set_index, VkWriteDescriptorSet write);
+        void bindDescriptorSet(Pipeline& pipeline, VkDescriptorSetLayout set_layout, unsigned set_index);
     };
 
     enum ShaderVarType {
@@ -67,87 +94,41 @@ namespace engine {
         std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
         std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
     };
-    template <int UsageFlag>
-    class Buffer {
-        size_t item_size;
-        
-        VkDeviceMemory memory = nullptr;
-        unsigned bindingSize = 0;
+    
+    struct Binding {
+        enum BindingType {
+            BINDING_TYPE_UNIFORM,
+            BINDING_TYPE_SAMPLER
+        } type;
+        unsigned size;
 
-        static unsigned getVarTypeSize(ShaderVarType type);
+        static Binding Sampler() {
+            return Binding{BINDING_TYPE_SAMPLER, 0};
+        }
+        static Binding Uniform(unsigned size) {
+            return Binding{BINDING_TYPE_UNIFORM, size};
+        }
 
-        public:
-            VkBuffer buffer = nullptr;
-
-            Buffer(size_t item_size) : item_size(item_size) {}
-
-            //Buffer(Buffer&) = delete;
-            Buffer operator=(Buffer&) = delete;
-
-            ~Buffer() {
-                VkDevice device = Engine::getDevice().device();
-                if (buffer == nullptr) {
-                    Logger::logWarning("destroying null buffer");
-                }
-                vkDestroyBuffer(device, buffer, nullptr);
-                vkFreeMemory(device, memory, nullptr);
+        VkDescriptorType getType() {
+            switch (type) {
+                case BINDING_TYPE_UNIFORM:
+                    return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                case BINDING_TYPE_SAMPLER:
+                    return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             }
-
-            virtual void bind()=0;
-
-            inline void set(const void *data) {
-                setVector(data, 1);
-            }
-
-            void setVector(const void *data, size_t size) {
-                Device& device = Engine::getDevice();
-                VkDeviceSize bufferSize = size * item_size;
-
-                if (buffer == nullptr) {
-                    device.createBuffer(bufferSize, UsageFlag,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    buffer, memory);
-                }
-
-                void* data_loc;
-                vkMapMemory(device.device(), memory, 0, bufferSize, 0, &data_loc);
-                memcpy(data_loc, data, bufferSize);
-                vkUnmapMemory(device.device(), memory);
-            }
-    };
-    class VertexBuffer : public Buffer<VK_BUFFER_USAGE_VERTEX_BUFFER_BIT> {
-        using Buffer::Buffer;
-
-        public:
-            void bind() override {
-                VkDeviceSize offset[] = {0};
-                vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, 1, &buffer, offset);
-            }
-    };
-    class IndexBuffer : public Buffer<VK_BUFFER_USAGE_INDEX_BUFFER_BIT> {
-        using Buffer::Buffer;
-
-        public:
-            void bind() override {
-                vkCmdBindIndexBuffer(Engine::getCurrentCommandBuffer(), buffer, 0, VK_INDEX_TYPE_UINT32);
-            }
-    };
-
-    class UniformBuffer : public Buffer<VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT> {
-        using Buffer::Buffer;
-
-        void bind() override {
-            Logger::logWarning("Calling bind() on uniform buffer does nothing!");
-            return;
+            Logger::logError("Invalid binding type");
+            throw;
         }
     };
+
+    class UniformBuffer;
 
     class Shader {
         const char* shaderPath;
 
         Pipeline* pipeline;
         unsigned pushConstantSize;
-        unsigned uniformSize;
+        std::vector<Binding> bindings;
         unsigned uniformCounter;
 
         VkDescriptorSetLayout descriptorSetLayout;
@@ -158,12 +139,15 @@ namespace engine {
         std::vector<std::vector<std::unique_ptr<UniformBuffer>>> uniformBuffers;
 
         public:
-            Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize);
+            Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, std::vector<Binding> bindings);
             ~Shader();
 
             void recreate();
             void bind();
             void pushConstant(const void* data, unsigned size);
-            void bindUniform(const void* uniform);
+            void writeSamplerBinding(unsigned set, unsigned binding, Texture& texture);
+            void writeUniformBinding(unsigned set, unsigned binding, const void* uniform);
+
+            void bindSet(unsigned set);
     };
 }

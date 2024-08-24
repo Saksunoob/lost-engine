@@ -1,14 +1,13 @@
 #include "systems.hpp"
 #include "resources.hpp"
+#include "buffer.hpp"
 
 void engine::renderColorMeshes(Scene& scene) {
     struct Data {
         glm::mat4 matrix;
         Color color;
     };
-
-    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, 0, sizeof(Data));
-
+    static Shader shader("shaders/ColorMesh", {{VAR_VEC2}}, 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();
     unsigned main_camera;
@@ -22,7 +21,7 @@ void engine::renderColorMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Color>();
+    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Color, Texture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
@@ -38,7 +37,10 @@ void engine::renderColorMeshes(Scene& scene) {
             proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
             *colorMesh.Get<Color>()
         };
-        shader.bindUniform(&data);
+        shader.writeUniformBinding(0, 0, &data);
+        shader.writeSamplerBinding(0, 1, *colorMesh.Get<Texture>());
+        shader.bindSet(0);
+        
         vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
 }

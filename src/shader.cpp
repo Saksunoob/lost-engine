@@ -1,6 +1,9 @@
 #include "shader.hpp"
+#include "buffer.hpp"
+#include <format>
 
 namespace engine {
+    const std::vector<VkDescriptorType> DescriptorPool::types = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
 
     inline unsigned DescriptorPool::getPoolIndex() {
         return std::log2(currently_allocated/STARTING_POOL_SIZE+1);
@@ -9,16 +12,18 @@ namespace engine {
     void DescriptorPool::createDescriptorPool(std::vector<VkDescriptorPool>& pool) {
         unsigned size = (1 << pool.size()) * STARTING_POOL_SIZE;
 
-        VkDescriptorPoolSize pool_size = {
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            size
-        };
+        std::vector<VkDescriptorPoolSize> pool_sizes{types.size()};
+        for (int i = 0; i < types.size(); i++) {
+            pool_sizes[i] = {
+                types[i], size
+            };
+        }
 
         VkDescriptorPoolCreateInfo createInfo;
         createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         createInfo.maxSets = size;
-        createInfo.poolSizeCount = 1;
-        createInfo.pPoolSizes = &pool_size;
+        createInfo.poolSizeCount = types.size();
+        createInfo.pPoolSizes = pool_sizes.data();
         createInfo.pNext = nullptr;
         createInfo.flags = 0;
 
@@ -38,21 +43,22 @@ namespace engine {
         }
     }
 
-    VkDescriptorSet DescriptorPool::writeDescriptorSet(VkDescriptorSetLayout set_layout, VkWriteDescriptorSet write) {
+    VkDescriptorSet DescriptorPool::writeDescriptor(VkDescriptorSetLayout set_layout, unsigned set_index, VkWriteDescriptorSet write) {
         std::vector<VkDescriptorPool>& framePools = pools[Engine::getCurrentSwapChainImage()];
 
         if (Engine::getCurrentSwapChainImage() != last_image) {
             for (auto& [set, reserve] : reserves[Engine::getCurrentSwapChainImage()]) {
-                reserve.written = 0;
+                reserve.restart();
             }
             last_image = Engine::getCurrentSwapChainImage();
         }
 
         Reserve& reserve = reserves[Engine::getCurrentSwapChainImage()][set_layout];
-
+        
         if (!reserve.full()) {
-            VkDescriptorSet set = reserve.next();
+            VkDescriptorSet set = reserve.current(set_index);
             write.dstSet = set;
+            
             vkUpdateDescriptorSets(Engine::getDevice().device(), 1, &write, 0, nullptr);
             return set;
         }
@@ -74,13 +80,19 @@ namespace engine {
         if (vkAllocateDescriptorSets(Engine::getDevice().device(), &setAllocInfo, &descriptor_set)) {
             Logger::logError("Failed to allocate descriptor set");
         }
-        currently_allocated += 1;
-        reserve.sets.push_back(descriptor_set);
-        
+        currently_allocated++;
         write.dstSet = descriptor_set;
+        reserve.push(descriptor_set, set_index);
         vkUpdateDescriptorSets(Engine::getDevice().device(), 1, &write, 0, nullptr);
-        reserve.written += 1;
         return descriptor_set;
+    }
+
+    void DescriptorPool::bindDescriptorSet(Pipeline& pipeline, VkDescriptorSetLayout set_layout, unsigned set_index) {
+        Reserve& reserve = reserves[Engine::getCurrentSwapChainImage()].at(set_layout);
+        VkDescriptorSet descriptorSet = reserve.current(set_index);
+        vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.getPipelineLayout(), set_index, 1, &descriptorSet, 0, nullptr);
+        reserve.bound++;
+        return;
     }
 
     unsigned ShaderVariables::getTotalSize() {
@@ -144,8 +156,8 @@ namespace engine {
 
     DescriptorPool* Shader::descriptorPool = nullptr;
 
-    Shader::Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, unsigned uniformSize) :
-        shaderPath(shaderPath), pushConstantSize(pushConstantSize), uniformSize(uniformSize), variables(variables), uniformBuffers(Engine::getSwapChain()->imageCount()) {
+    Shader::Shader(const char* shaderPath, ShaderVariables variables, unsigned pushConstantSize, std::vector<Binding> bindings) :
+        shaderPath(shaderPath), pushConstantSize(pushConstantSize), bindings(bindings), variables(variables), uniformBuffers(Engine::getSwapChain()->imageCount()) {
 
         if (descriptorPool == nullptr) {
             descriptorPool = new DescriptorPool();
@@ -169,19 +181,21 @@ namespace engine {
     void Shader::recreate() {
         Device& device = Engine::getDevice();
 
-        VkDescriptorSetLayoutBinding uniformBufferBinding = {};
-        uniformBufferBinding.binding = 0;
-        uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uniformBufferBinding.descriptorCount = 1;
-        uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        uniformBufferBinding.pImmutableSamplers = nullptr;
+        std::vector<VkDescriptorSetLayoutBinding> uniformBufferBindings{bindings.size()};
+        for (int i = 0; i < bindings.size(); i++) {
+            uniformBufferBindings[i].binding = i;
+            uniformBufferBindings[i].descriptorType = bindings[i].getType();
+            uniformBufferBindings[i].descriptorCount = 1;
+            uniformBufferBindings[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            uniformBufferBindings[i].pImmutableSamplers = nullptr;
+        }
 
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.flags = 0;
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
+        layoutInfo.bindingCount = bindings.size();
         layoutInfo.pNext = nullptr;
-        layoutInfo.pBindings = &uniformBufferBinding;
+        layoutInfo.pBindings = uniformBufferBindings.data();
 
         if (vkCreateDescriptorSetLayout(device.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create descriptor set layout!");
@@ -218,32 +232,50 @@ namespace engine {
         vkCmdPushConstants(Engine::getCurrentCommandBuffer(), pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, size, data);
     }
 
-    void Shader::bindUniform(const void* uniform) {
+    void Shader::writeSamplerBinding(unsigned set, unsigned binding, Texture& texture) {
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = texture.getImageLayout();
+        imageInfo.imageView = texture.getImageView();
+        imageInfo.sampler = texture.getSampler();
+
+        VkWriteDescriptorSet writeDescriptorSet{};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstBinding = binding;
+        writeDescriptorSet.dstArrayElement = 0;
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.pImageInfo = &imageInfo;
+
+        VkDescriptorSet descriptorSet = descriptorPool->writeDescriptor(descriptorSetLayout, set, writeDescriptorSet);
+    }
+
+    void Shader::writeUniformBinding(unsigned set, unsigned binding, const void* uniform) {
         std::vector<std::unique_ptr<UniformBuffer>>& buffers = uniformBuffers[Engine::getCurrentSwapChainImage()];
+        unsigned size = bindings.at(binding).size;
         if (uniformCounter == buffers.size()) {
-            buffers.emplace_back(std::make_unique<UniformBuffer>(uniformSize));
+            buffers.emplace_back(std::make_unique<UniformBuffer>(size));
         }
         
         UniformBuffer& buffer = *buffers.at(uniformCounter).get();
-
         buffer.setVector(uniform, 1);
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer = buffer.buffer;
         bufferInfo.offset = 0;
-        bufferInfo.range = uniformSize;
+        bufferInfo.range = size;
 
         VkWriteDescriptorSet writeDescriptorSet = {};
         writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstBinding = 0;
+        writeDescriptorSet.dstBinding = binding;
         writeDescriptorSet.dstArrayElement = 0;
         writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         writeDescriptorSet.descriptorCount = 1;
         writeDescriptorSet.pBufferInfo = &bufferInfo;
-
-        VkDescriptorSet descriptorSet = descriptorPool->writeDescriptorSet(descriptorSetLayout, writeDescriptorSet);
-        vkCmdBindDescriptorSets(Engine::getCurrentCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-
+        descriptorPool->writeDescriptor(descriptorSetLayout, set, writeDescriptorSet);
         uniformCounter++;
         return;
+    }
+
+    void Shader::bindSet(unsigned set) {
+        descriptorPool->bindDescriptorSet(*pipeline, descriptorSetLayout, set);
     }
 }

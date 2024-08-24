@@ -28,6 +28,7 @@ int main() {
     main_scene.addComponent(square2, engine::Mesh(vertices, indices));
     main_scene.addComponent(square2, engine::Color(0, 1, 0));
     main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), -1));
+    main_scene.addComponent(square2, engine::Texture{"../src/textures/test.png"});
 
     main_scene.addStageAt("preupdate", 0);
     main_scene.getStage("preupdate")->addSystem(engine::timeSystem);

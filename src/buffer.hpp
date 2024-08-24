@@ -15,7 +15,34 @@ namespace engine {
 
             Buffer(size_t item_size, int usage_flag) : item_size(item_size), usage_flag(usage_flag) {}
 
-            Buffer operator=(Buffer&) = delete;
+            Buffer(const Buffer&) = delete;
+            Buffer& operator=(const Buffer&) = delete;
+
+
+            Buffer(Buffer&& other) noexcept {
+                buffer = other.buffer;
+                memory = other.memory;
+
+                other.buffer = VK_NULL_HANDLE;
+                other.memory = VK_NULL_HANDLE;
+            }
+
+            Buffer& operator=(Buffer&& other) noexcept {
+                if (this != &other) {
+                    // Free existing resources
+                    vkDestroyBuffer(Engine::getDevice().device(), buffer, nullptr);
+                    vkFreeMemory(Engine::getDevice().device(), memory, nullptr);
+
+                    // Move resources from the other object
+                    buffer = other.buffer;
+                    memory = other.memory;
+
+                    // Invalidate the moved-from object
+                    other.buffer = VK_NULL_HANDLE;
+                    other.memory = VK_NULL_HANDLE;
+                }
+                return *this;
+            }
 
             ~Buffer() {
                 VkDevice device = Engine::getDevice().device();
