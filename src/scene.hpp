@@ -120,6 +120,6 @@ namespace engine {
 
     template <typename C>
     void Entity::addComponent(C component) {
-        scene.addComponent(this, component);
+        scene.addComponent(*this, component);
     }
 }

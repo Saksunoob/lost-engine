@@ -5,8 +5,8 @@ int main() {
     engine::Scene& main_scene = engine::Engine::addScene("main", true);
 
     engine::Entity camera = main_scene.createEntity();
-    main_scene.addComponent(camera, engine::Camera(true));
-    main_scene.addComponent(camera, engine::GlobalTransform(engine::Vector2(0, 0), engine::Vector2(1, 1), 0));
+    camera.addComponent(engine::Camera(true));
+    camera.addComponent(engine::GlobalTransform(engine::Vector2(0, 0), engine::Vector2(1, 1), 0));
 
     std::vector<engine::Vector2> vertices = {
         {0.5, 0.5},
@@ -25,16 +25,16 @@ int main() {
     };
 
     engine::Entity square = main_scene.createEntity();
-    main_scene.addComponent(square, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square, engine::Color(1, 0, 0));
-    main_scene.addComponent(square, engine::GlobalTransform(engine::Vector2(100, 0), engine::Vector2(200, 200), 1));
-    main_scene.addComponent(square, engine::Texture{"../src/textures/test.png"});
+    square.addComponent(engine::Mesh(vertices, indices));
+    square.addComponent(engine::Color(1, 0, 0));
+    square.addComponent(engine::GlobalTransform(engine::Vector2(100, 0), engine::Vector2(200, 200), 1));
+    square.addComponent(engine::Texture{"../src/textures/test.png"});
 
     engine::Entity square2 = main_scene.createEntity();
-    main_scene.addComponent(square2, engine::Mesh(vertices, indices));
-    main_scene.addComponent(square2, engine::UVs(uvs));
-    main_scene.addComponent(square2, engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), 0));
-    main_scene.addComponent(square2, engine::Texture{"../src/textures/test.png"});
+    square2.addComponent(engine::Mesh(vertices, indices));
+    square2.addComponent(engine::UVs(uvs));
+    square2.addComponent(engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), 0));
+    square2.addComponent(engine::Texture{"../src/textures/test.png"});
 
     engine::Engine::run();
 }
