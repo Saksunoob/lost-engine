@@ -1,6 +1,4 @@
-#include <vulkan/vulkan.hpp>
-#include "vulkan/device.hpp"
-#include "engine.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace engine {
     class Buffer {
@@ -13,87 +11,36 @@ namespace engine {
         public:
             VkBuffer buffer = nullptr;
 
-            Buffer(size_t item_size, int usage_flag) : item_size(item_size), usage_flag(usage_flag) {}
+            Buffer(size_t item_size, int usage_flag);
 
             Buffer(const Buffer&) = delete;
             Buffer& operator=(const Buffer&) = delete;
 
 
-            Buffer(Buffer&& other) noexcept {
-                buffer = other.buffer;
-                memory = other.memory;
+            Buffer(Buffer&& other) noexcept;
+            Buffer& operator=(Buffer&& other) noexcept;
 
-                other.buffer = VK_NULL_HANDLE;
-                other.memory = VK_NULL_HANDLE;
-            }
+            ~Buffer();
 
-            Buffer& operator=(Buffer&& other) noexcept {
-                if (this != &other) {
-                    // Free existing resources
-                    vkDestroyBuffer(Engine::getDevice().device(), buffer, nullptr);
-                    vkFreeMemory(Engine::getDevice().device(), memory, nullptr);
-
-                    // Move resources from the other object
-                    buffer = other.buffer;
-                    memory = other.memory;
-
-                    // Invalidate the moved-from object
-                    other.buffer = VK_NULL_HANDLE;
-                    other.memory = VK_NULL_HANDLE;
-                }
-                return *this;
-            }
-
-            ~Buffer() {
-                VkDevice device = Engine::getDevice().device();
-                if (buffer == nullptr) {
-                    Logger::logWarning("destroying null buffer");
-                }
-                vkDestroyBuffer(device, buffer, nullptr);
-                vkFreeMemory(device, memory, nullptr);
-            }
-
-            virtual void bind() {
-                Logger::logWarning("bind() does nothing for this buffer!");
-                return;
-            }
+            virtual void bind();
 
             inline void set(const void *data) {
                 setVector(data, 1);
             }
 
-            void setVector(const void *data, size_t size) {
-                Device& device = Engine::getDevice();
-                VkDeviceSize bufferSize = size * item_size;
-
-                if (buffer == nullptr) {
-                    device.createBuffer(bufferSize, usage_flag,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    buffer, memory);
-                }
-
-                void* data_loc;
-                vkMapMemory(device.device(), memory, 0, bufferSize, 0, &data_loc);
-                memcpy(data_loc, data, bufferSize);
-                vkUnmapMemory(device.device(), memory);
-            }
+            void setVector(const void *data, size_t size);
     };
     class VertexBuffer : public Buffer {
         public:
         VertexBuffer(unsigned item_size) : Buffer(item_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {};
 
-        void bind() override {
-            VkDeviceSize offset[] = {0};
-            vkCmdBindVertexBuffers(Engine::getCurrentCommandBuffer(), 0, 1, &buffer, offset);
-        }
+        void bind() override;
     };
     class IndexBuffer : public Buffer {
         public:
         IndexBuffer(unsigned item_size) : Buffer(item_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {};
 
-        void bind() override {
-            vkCmdBindIndexBuffer(Engine::getCurrentCommandBuffer(), buffer, 0, VK_INDEX_TYPE_UINT32);
-        }
+        void bind() override;
     };
     class UniformBuffer : public Buffer {
         public:
