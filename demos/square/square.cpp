@@ -27,16 +27,17 @@ int main() {
     engine::Entity square = main_scene.createEntity();
     square.addComponent(engine::Mesh(vertices, indices));
     square.addComponent(engine::Color(1, 0, 0));
-    square.addComponent(engine::GlobalTransform(engine::Vector2(100, 0), engine::Vector2(200, 200), 1));
-
+    square.addComponent(engine::GlobalTransform(engine::Vector2(50, 0), engine::Vector2(200, 200), 1));
+    square.addComponent(engine::ZLayer(0, 0.2));
     engine::Texture texture("../src/textures/test.png");
 
     for (int i = 0; i < 1000; i++) {
         engine::Entity square2 = main_scene.createEntity();
         square2.addComponent(engine::Mesh(vertices, indices));
         square2.addComponent(engine::UVs(uvs));
-        square2.addComponent(engine::GlobalTransform(engine::Vector2(-100, 0), engine::Vector2(100, 100), 0));
+        square2.addComponent(engine::GlobalTransform(engine::Vector2(-50, 0), engine::Vector2(100, 100), 0));
         square2.addComponent(texture);
+        square2.addComponent(engine::ZLayer(0, 0.1));
     }
     
 

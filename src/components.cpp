@@ -1,11 +1,12 @@
 #include "components.hpp"
-
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/gtc/matrix_transform.hpp>
 #include "vulkan/device.hpp"
 #include "buffer.hpp"
 #include "engine.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
+
 
 using namespace engine;
 
@@ -18,8 +19,47 @@ glm::mat4 Transform::getTransformationMatrix() const {
     return matrix;
 }
 
+glm::mat4 Transform::getTransformationMatrix(float z) const {
+    glm::mat4 matrix = glm::mat4(1);
+    matrix = glm::translate(matrix, glm::vec3(position.x, position.y, z));
+    matrix = glm::rotate(matrix, (float)rotation, glm::vec3(0, 0, 1));
+    matrix = glm::scale(matrix, glm::vec3(scale.x, scale.y, 1.0));
+    
+    return matrix;
+}
+
+int ZLayer::min_layer = 0;
+int ZLayer::max_layer = 0;
+
+ZLayer::ZLayer(int layer, float order) : layer(layer), order(order) {
+    if (order < 0. || order >= 1.) {
+        Logger::logWarning("ZLayer.order should be kept at 0 <= order < 1. It is set at: " + std::to_string(order));
+    }
+
+    min_layer = std::min(layer, min_layer);
+    max_layer = std::max(layer, max_layer);
+}
+
+void ZLayer::setLayer(int new_layer) {
+    layer = new_layer;
+
+    min_layer = std::min(layer, min_layer);
+    max_layer = std::max(layer, max_layer);
+}
+
+float ZLayer::getZ() {
+    if (order < 0. || order >= 1.) {
+        Logger::logWarning("ZLayer.order should be kept at 0 <= order < 1. It is set at: " + std::to_string(order));
+    }
+
+    int layer_count = max_layer-min_layer+1;
+    float layer_width = 1./layer_count;
+    int rel_layer = layer-min_layer;
+
+    return rel_layer*layer_width+order*layer_width;
+}
+
 glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 window_size) {
-    int viewport[4];
     glm::mat4 matrix = transform.getTransformationMatrix();
     matrix = glm::scale(matrix, glm::vec3(window_size.x/2.0, window_size.y/2.0, 1.0));
 

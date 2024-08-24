@@ -85,10 +85,26 @@ namespace engine {
         Transform(Vector2 position, Vector2 scale, double rotation) : position(position), scale(scale), rotation(rotation) {};
 
         glm::mat4 getTransformationMatrix() const;
+        glm::mat4 getTransformationMatrix(float z) const;
     };
 
     struct GlobalTransform : Transform {
         GlobalTransform(Vector2 position, Vector2 scale, double rotation): Transform(position, scale, rotation) {};
+    };
+
+    /// Determines entity's depth value. Lower is rendered on top.
+    struct ZLayer {
+        float order;
+
+        ZLayer(int layer, float order);
+        void setLayer(int new_layer);
+
+        float getZ();
+
+        private:
+        int layer;
+        static int min_layer;
+        static int max_layer;
     };
 
     class VertexBuffer;

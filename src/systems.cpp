@@ -22,7 +22,7 @@ void engine::renderColorMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, Color>();
+    Components colorMeshes = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, Color>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
@@ -35,13 +35,13 @@ void engine::renderColorMeshes(Scene& scene) {
         mesh.indexBuffer->bind();
 
         Data data {
-            proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(),
+            proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(colorMesh.Get<ZLayer>()->getZ()),
             *colorMesh.Get<Color>()
         };
         shader.writeUniformBinding(0, 0, &data);
         shader.bindSet(0);
         
-        vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmdBuffer, mesh.indices.size(), 1, 0, 0, 0);
     }
 }
 
@@ -64,26 +64,26 @@ void engine::renderUVMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, Mesh, UVs, Texture>();
+    Components uvMeshes = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
     shader.bind();
-    for (unsigned i = 0; i < colorMeshes.size(); i++) {
-        EntityComponents colorMesh = colorMeshes[i];
-        Mesh& mesh = *colorMesh.Get<Mesh>();
-        shader.bindVertexBuffers({mesh.vertexBuffer, colorMesh.Get<UVs>()->vertexBuffer});
+    for (unsigned i = 0; i < uvMeshes.size(); i++) {
+        EntityComponents uvMesh = uvMeshes[i];
+        Mesh& mesh = *uvMesh.Get<Mesh>();
+        shader.bindVertexBuffers({mesh.vertexBuffer, uvMesh.Get<UVs>()->vertexBuffer});
         mesh.indexBuffer->bind();
 
         Data data {
-            proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix()
+            proj * uvMesh.Get<GlobalTransform>()->getTransformationMatrix(uvMesh.Get<ZLayer>()->getZ())
         };
         shader.writeUniformBinding(0, 0, &data);
-        shader.writeSamplerBinding(0, 1, colorMesh.Get<Texture>()->getData());
+        shader.writeSamplerBinding(0, 1, uvMesh.Get<Texture>()->getData());
         shader.bindSet(0);
         
-        vkCmdDrawIndexed(cmdBuffer, colorMesh.Get<Mesh>()->indices.size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmdBuffer, mesh.indices.size(), 1, 0, 0, 0);
     }
 }
 
