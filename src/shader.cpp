@@ -130,6 +130,9 @@ namespace engine {
                 return 16;
             case VAR_UVEC4:
                 return 16;
+            default:
+                Logger::logError("Getting invalid variable");
+                return 0;
         }
     }
 
