@@ -33,7 +33,7 @@ int main() {
     square.addComponent(ZLayer(0, 0.2));
     Texture texture("../src/textures/test.png");
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1; i++) {
         Entity square2 = main_scene.createEntity();
         square2.addComponent(Mesh(vertices, indices));
         square2.addComponent(UVs(uvs));

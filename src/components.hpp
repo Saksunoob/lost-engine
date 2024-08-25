@@ -146,12 +146,31 @@ namespace engine {
         static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
     };
 
+    struct TextureFormat {
+        uint channels;
+        uint type;
+        static TextureFormat Unorm(uint channels) { return {channels, 9}; }
+        static TextureFormat Snorm(uint channels) { return {channels, 10}; }
+        static TextureFormat Uscaled(uint channels) { return {channels, 11}; }
+        static TextureFormat Sscaled(uint channels) { return {channels, 12}; }
+        static TextureFormat Uint(uint channels) { return {channels, 13}; }
+        static TextureFormat Sint(uint channels) { return {channels, 14}; }
+        static TextureFormat Srgb(uint channels) { return {channels, 15}; }
+        VkFormat getFormat() {
+            uint mul = channels;
+            if (mul == 4) {
+                mul++;
+            }
+            return static_cast<VkFormat>(type+7*(mul-1));
+        }
+    };    
+
     struct TextureData {
     public:
-        TextureData(const std::string &filepath);
+        TextureData(const void* data, IVector2 size, TextureFormat format);
         ~TextureData();
 
-        TextureData(const TextureData &);
+        TextureData(const TextureData &) = delete;
         TextureData(TextureData &&);
 
         VkSampler getSampler() { return sampler; }
@@ -161,8 +180,8 @@ namespace engine {
         void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
         void generateMipmaps();
 
-        int width, height, mipLevels;
-        const std::string& filepath;
+        IVector2 size;
+        int mipLevels;
 
         VkImage image;
         VkDeviceMemory imageMemory;
@@ -175,6 +194,7 @@ namespace engine {
     struct Texture {
     public:
         Texture(const std::string &filepath);
+        Texture(const void* data, IVector2 size, TextureFormat format);
 
         TextureData& getData() { return *data.get(); }
     private:

@@ -116,18 +116,13 @@ UVs::~UVs()  {
     }
 }
 
-TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
-    int channels;
-    int m_BytesPerPixel;
+TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) : size(size) {
+    mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.x, size.y)))) + 1;
 
-    auto data = stbi_load(filepath.c_str(), &width, &height, &m_BytesPerPixel, 4);
+    StagingBuffer stagingBuffer(format.channels);
+    stagingBuffer.setVector(data, size.x*size.y);
 
-    mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
-
-    StagingBuffer stagingBuffer(4);
-    stagingBuffer.setVector(data, width*height);
-
-    imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    imageFormat = format.getFormat();
 
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -139,7 +134,7 @@ TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.extent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+    imageInfo.extent = {static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), 1};
     imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
     Device& device = Engine::getDevice();
@@ -148,7 +143,7 @@ TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
 
     transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    device.copyBufferToImage(stagingBuffer.buffer, image, static_cast<uint>(width), static_cast<uint>(height), 1);
+    device.copyBufferToImage(stagingBuffer.buffer, image, static_cast<uint>(size.x), static_cast<uint>(size.y), 1);
 
     generateMipmaps();
     imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -184,14 +179,9 @@ TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
     imageViewInfo.image = image;
 
     vkCreateImageView(device.device(), &imageViewInfo, nullptr, &imageView);
-
-    stbi_image_free(data);
 }
 
-TextureData::TextureData(const TextureData &other) : TextureData(other.filepath) {
-}
-
-TextureData::TextureData(TextureData &&other) : filepath(other.filepath), width(other.width), height(other.height), mipLevels(other.mipLevels),
+TextureData::TextureData(TextureData &&other) : size(other.size), mipLevels(other.mipLevels),
     image(other.image), imageMemory(other.imageMemory), imageView(other.imageView), sampler(other.sampler), imageFormat(other.imageFormat), imageLayout(other.imageLayout) {
     other.image = nullptr;
     other.imageMemory = nullptr;
@@ -259,7 +249,17 @@ void TextureData::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout n
 }
 
 Texture::Texture(const std::string &filepath) {
-    data = std::shared_ptr<TextureData>(new TextureData(filepath));
+    int channels;
+    int m_BytesPerPixel;
+    IVector2 size;
+    auto img_data = stbi_load(filepath.c_str(), &size.x, &size.y, &m_BytesPerPixel, 4);
+    data = std::shared_ptr<TextureData>(new TextureData(img_data, size, TextureFormat::Srgb(4)));
+
+    stbi_image_free(img_data);
+}
+
+Texture::Texture(const void* img_data, IVector2 size, TextureFormat format) {
+    data = std::shared_ptr<TextureData>(new TextureData(img_data, size, format));
 }
 
 void TextureData::generateMipmaps() {
@@ -283,8 +283,8 @@ void TextureData::generateMipmaps() {
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = width;
-    int32_t mipHeight = height;
+    int32_t mipWidth = size.x;
+    int32_t mipHeight = size.y;
 
     for (uint32_t i = 1; i < mipLevels; i++) {
         barrier.subresourceRange.baseMipLevel = i - 1;

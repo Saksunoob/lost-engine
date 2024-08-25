@@ -3,7 +3,7 @@
 #include "engine.hpp"
 
 namespace engine {
-    Buffer::Buffer(size_t item_size, int usage_flag, bool staged) : item_size(item_size), usage_flag(usage_flag), staged(true) {}
+    Buffer::Buffer(size_t item_size, int usage_flag, bool staged) : item_size(item_size), usage_flag(usage_flag), staged(staged) {}
 
 
     Buffer::Buffer(Buffer&& other) noexcept {
