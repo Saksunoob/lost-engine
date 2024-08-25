@@ -276,7 +276,7 @@ namespace engine {
         std::vector<std::unique_ptr<UniformBuffer>>& buffers = uniformBuffers[Engine::getCurrentSwapChainImage()];
         unsigned size = bindings.at(binding).size;
         if (uniformCounter == buffers.size()) {
-            buffers.emplace_back(std::make_unique<UniformBuffer>(size));
+            buffers.emplace_back(std::make_unique<UniformBuffer>(size, false));
         }
         
         UniformBuffer& buffer = *buffers.at(uniformCounter).get();

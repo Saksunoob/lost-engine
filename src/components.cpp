@@ -67,18 +67,18 @@ glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 windo
 }
 
 Mesh::Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2), true);
     vertexBuffer->setVector(vertices.data(), vertices.size());
 
-    indexBuffer = new IndexBuffer(sizeof(unsigned));
+    indexBuffer = new IndexBuffer(sizeof(unsigned), true);
     indexBuffer->setVector(indices.data(), indices.size());
 }
 
 Mesh::Mesh(const Mesh& mesh) : vertices(mesh.vertices), indices(mesh.indices) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2), true);
     vertexBuffer->setVector(vertices.data(), vertices.size());
 
-    indexBuffer = new IndexBuffer(sizeof(unsigned));
+    indexBuffer = new IndexBuffer(sizeof(unsigned), true);
     indexBuffer->setVector(indices.data(), indices.size());
 }
 
@@ -97,12 +97,12 @@ Mesh::~Mesh()  {
 }
 
 UVs::UVs(std::vector<Vector2> uvs) : uvs(uvs) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2),true);
     vertexBuffer->setVector(uvs.data(), uvs.size());
 }
 
 UVs::UVs(const UVs& other) : uvs(other.uvs) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2));
+    vertexBuffer = new VertexBuffer(sizeof(glm::vec2),true);
     vertexBuffer->setVector(uvs.data(), uvs.size());
 }
 
@@ -124,7 +124,7 @@ TextureData::TextureData(const std::string &filepath) : filepath(filepath) {
 
     mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    Buffer stagingBuffer{4,VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+    StagingBuffer stagingBuffer(4);
     stagingBuffer.setVector(data, width*height);
 
     imageFormat = VK_FORMAT_R8G8B8A8_SRGB;

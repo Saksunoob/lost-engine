@@ -462,7 +462,7 @@ void Device::createBuffer(
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateBuffer(device_, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        Logger::logError("failed to create vertex buffer!");
+        Logger::logError("failed to create buffer!");
         throw;
     }
 
@@ -475,7 +475,7 @@ void Device::createBuffer(
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(device_, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        Logger::logError("failed to allocate vertex buffer memory!");
+        Logger::logError("failed to allocate buffer memory!");
         throw;
     }
 

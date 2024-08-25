@@ -3,7 +3,7 @@
 #include "engine.hpp"
 
 namespace engine {
-    Buffer::Buffer(size_t item_size, int usage_flag) : item_size(item_size), usage_flag(usage_flag) {}
+    Buffer::Buffer(size_t item_size, int usage_flag, bool staged) : item_size(item_size), usage_flag(usage_flag), staged(true) {}
 
 
     Buffer::Buffer(Buffer&& other) noexcept {
@@ -45,9 +45,16 @@ namespace engine {
         VkDeviceSize bufferSize = size * item_size;
 
         if (buffer == nullptr) {
-            device.createBuffer(bufferSize, usage_flag,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            device.createBuffer(bufferSize, usage_flag | staged*VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            staged ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             buffer, memory);
+        }
+
+        if (staged) {
+            StagingBuffer stagingBuffer(item_size);
+            stagingBuffer.setVector(data, size);
+            Engine::getDevice().copyBuffer(stagingBuffer.buffer, buffer, bufferSize);
+            return;
         }
 
         void* data_loc;
