@@ -2,9 +2,23 @@
 
 using namespace engine;
 
+static std::vector<u_char> image = {0, 64, 128, 192};
+static std::vector<float> f_image = {0, 64, 128, 192};
+
+void updateTexture(Scene& scene) {
+    Components textures = scene.GetWithComponents<Texture>();
+    for (int i = 0; i < f_image.size(); i++) {
+        f_image[i] += 0.1;
+        image[i] = static_cast<u_char>(f_image[i]);
+    }
+    textures[0].Get<Texture>()->getData().update(image.data());
+}
+
 int main() {
     Engine::init("Square", IVector2(800, 600));
     Scene& main_scene = Engine::addScene("main", true);
+
+    main_scene.getStage("render")->addSystem(updateTexture);
 
     Entity camera = main_scene.createEntity();
     camera.addComponent(Camera(true));
@@ -31,7 +45,7 @@ int main() {
     square.addComponent(Color(1, 0, 0));
     square.addComponent(GlobalTransform(Vector2(50, 0), Vector2(200, 200), 1));
     square.addComponent(ZLayer(0, 0.2));
-    Texture texture("../src/textures/test.png");
+    Texture texture(image.data(), {2, 2}, TextureFormat::Srgb(1));
 
     for (int i = 0; i < 1; i++) {
         Entity square2 = main_scene.createEntity();

@@ -116,7 +116,7 @@ UVs::~UVs()  {
     }
 }
 
-TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) : size(size) {
+TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) : size(size), format(format) {
     mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.x, size.y)))) + 1;
 
     StagingBuffer stagingBuffer(format.channels);
@@ -205,6 +205,18 @@ TextureData::~TextureData() {
     }
 }
 
+void TextureData::update(const void* data) {
+    transitionImageLayout(imageLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    StagingBuffer stagingBuffer(format.channels);
+    stagingBuffer.setVector(data, size.x * size.y);
+
+    Device& device = Engine::getDevice();
+    device.copyBufferToImage(stagingBuffer.buffer, image, static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), 1);
+
+    generateMipmaps();
+}
+
 void TextureData::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
     Device& device = Engine::getDevice();
     VkCommandBuffer commandBuffer = device.beginSingleTimeCommands();
@@ -238,6 +250,13 @@ void TextureData::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout n
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else {
         throw std::runtime_error("unsupported layout transition!");

@@ -176,11 +176,14 @@ namespace engine {
         VkSampler getSampler() { return sampler; }
         VkImageView getImageView() { return imageView; }
         VkImageLayout getImageLayout() { return imageLayout; }
+
+        void update(const void* data);
     private:
         void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
         void generateMipmaps();
 
         IVector2 size;
+        TextureFormat format;
         int mipLevels;
 
         VkImage image;
