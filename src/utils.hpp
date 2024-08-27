@@ -21,4 +21,9 @@ namespace engine {
         Color(float r, float g, float b) : r(r), g(g), b(b), a(1.0) {};
         Color(float brightness) : r(brightness), g(brightness), b(brightness), a(1.0) {};
     };
+
+    struct PerlinNoise {
+        static std::vector<u_char> generate_char(int n, float freq, float seed);
+        static std::vector<float> generate(int n, float freq, float seed);
+    };
 }
