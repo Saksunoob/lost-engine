@@ -111,18 +111,17 @@ namespace engine {
     class IndexBuffer;
 
     struct Mesh {
-        std::vector<Vector2> vertices;
-        std::vector<unsigned> indices;
+        const std::vector<Vector2> vertices;
+        const std::vector<unsigned> indices;
+        const int mesh_id;
 
-        VertexBuffer* vertexBuffer = nullptr;
-        IndexBuffer* indexBuffer = nullptr;
+        std::shared_ptr<VertexBuffer> vertexBuffer = nullptr;
+        std::shared_ptr<IndexBuffer> indexBuffer = nullptr;
 
         Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices);
 
-        Mesh(const Mesh&);
-        Mesh(Mesh&&);
-
-        ~Mesh();
+        private:
+            static int mesh_id_counter;
     };
 
     struct UVs {

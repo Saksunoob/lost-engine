@@ -66,34 +66,14 @@ glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 windo
     return glm::inverse(matrix);
 }
 
-Mesh::Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2), true);
+int Mesh::mesh_id_counter = 0;
+
+Mesh::Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices), mesh_id(mesh_id_counter++) {
+    vertexBuffer = std::make_shared<VertexBuffer>(sizeof(glm::vec2), true);
     vertexBuffer->setVector(vertices.data(), vertices.size());
 
-    indexBuffer = new IndexBuffer(sizeof(unsigned), true);
+    indexBuffer = std::make_shared<IndexBuffer>(sizeof(unsigned), true);
     indexBuffer->setVector(indices.data(), indices.size());
-}
-
-Mesh::Mesh(const Mesh& mesh) : vertices(mesh.vertices), indices(mesh.indices) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2), true);
-    vertexBuffer->setVector(vertices.data(), vertices.size());
-
-    indexBuffer = new IndexBuffer(sizeof(unsigned), true);
-    indexBuffer->setVector(indices.data(), indices.size());
-}
-
-Mesh::Mesh(Mesh&& mesh) : vertices(mesh.vertices), indices(mesh.indices), vertexBuffer(mesh.vertexBuffer), indexBuffer(mesh.indexBuffer) {
-    mesh.vertexBuffer = nullptr;
-    mesh.indexBuffer = nullptr;
-}
-
-Mesh::~Mesh()  {
-    if (vertexBuffer) {
-        delete vertexBuffer;
-    }
-    if (indexBuffer) {
-        delete indexBuffer;
-    }
 }
 
 UVs::UVs(std::vector<Vector2> uvs) : uvs(uvs) {

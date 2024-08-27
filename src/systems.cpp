@@ -4,9 +4,12 @@
 #include <chrono>
 
 void engine::renderColorMeshes(Scene& scene) {
+
+    const int ARRAY_SIZE = 10000;
+
     struct Data {
-        glm::mat4 matrix;
-        Color color;
+        glm::mat4 matrix[ARRAY_SIZE];
+        Color color[ARRAY_SIZE];
     };
     static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
@@ -27,30 +30,44 @@ void engine::renderColorMeshes(Scene& scene) {
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
-    shader.bind();
-    for (unsigned i = 0; i < colorMeshes.size(); i++) {
-        EntityComponents colorMesh = colorMeshes[i];
-        Mesh& mesh = *colorMesh.Get<Mesh>();
-        mesh.vertexBuffer->bind();
-        mesh.indexBuffer->bind();
 
-        Data data {
-            proj * colorMesh.Get<GlobalTransform>()->getTransformationMatrix(colorMesh.Get<ZLayer>()->getZ()),
-            *colorMesh.Get<Color>()
-        };
-        shader.writeUniformBinding(0, 0, &data);
-        shader.bindSet(0);
-        
-        vkCmdDrawIndexed(cmdBuffer, mesh.indices.size(), 1, 0, 0, 0);
+    std::unordered_map<int, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, Color>>> meshes{};
+
+    for (unsigned i = 0; i < colorMeshes.size(); i++) {
+        meshes[colorMeshes[i].Get<Mesh>()->mesh_id].push_back(colorMeshes[i]);
+    }
+
+    shader.bind();
+    for (auto& [id, components] : meshes) {
+        int arrays = (components.size()-1)/ARRAY_SIZE+1;
+
+        for (int a = 0; a < arrays; a++) {
+            components[0].Get<Mesh>()->vertexBuffer->bind();
+            components[0].Get<Mesh>()->indexBuffer->bind();
+
+            Data data;
+            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
+                data.matrix[i] = proj * components[a*ARRAY_SIZE+i].Get<GlobalTransform>()->getTransformationMatrix(components[a*ARRAY_SIZE+i].Get<ZLayer>()->getZ());
+                data.color[i] = *components[a*ARRAY_SIZE+i].Get<Color>();
+            }
+            shader.writeUniformBinding(0, 0, &data);
+            shader.bindSet(0);
+            
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+        }
     }
 }
 
 void engine::renderUVMeshes(Scene& scene) {
+    // TODO: Make batching respect different textures on meshes.
+
+    const int ARRAY_SIZE = 10000;
+
     struct Data {
         glm::mat4 matrix;
     };
 
-    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)*ARRAY_SIZE), Binding::Sampler()});
     Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
     Component<Camera>& cameras = validCameras.Get<Camera>();
     unsigned main_camera;
@@ -69,21 +86,34 @@ void engine::renderUVMeshes(Scene& scene) {
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
-    shader.bind();
-    for (unsigned i = 0; i < uvMeshes.size(); i++) {
-        EntityComponents uvMesh = uvMeshes[i];
-        Mesh& mesh = *uvMesh.Get<Mesh>();
-        shader.bindVertexBuffers({mesh.vertexBuffer, uvMesh.Get<UVs>()->vertexBuffer});
-        mesh.indexBuffer->bind();
 
-        Data data {
-            proj * uvMesh.Get<GlobalTransform>()->getTransformationMatrix(uvMesh.Get<ZLayer>()->getZ())
-        };
-        shader.writeUniformBinding(0, 0, &data);
-        shader.writeSamplerBinding(0, 1, uvMesh.Get<Texture>()->getData());
-        shader.bindSet(0);
+    std::unordered_map<int, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>>> meshes{};
+
+    for (unsigned i = 0; i < uvMeshes.size(); i++) {
+        meshes[uvMeshes[i].Get<Mesh>()->mesh_id].push_back(uvMeshes[i]);
+    }
+
+    shader.bind();
+    for (auto& [id, components] : meshes) {
+        int arrays = (components.size()-1)/ARRAY_SIZE+1;
+
+        for (int a = 0; a < arrays; a++) {
+            shader.bindVertexBuffers({components[0].Get<Mesh>()->vertexBuffer.get(), components[0].Get<UVs>()->vertexBuffer});
+            components[0].Get<Mesh>()->indexBuffer->bind();
+
+            Data data[ARRAY_SIZE];
+            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
+                data[i] = Data {
+                    proj * components[a*ARRAY_SIZE+i].Get<GlobalTransform>()->getTransformationMatrix(components[a*ARRAY_SIZE+i].Get<ZLayer>()->getZ())
+                };
+            }
+            shader.writeUniformBinding(0, 0, &data);
+            shader.writeSamplerBinding(0, 1, components[0].Get<Texture>()->getData());
+            shader.bindSet(0);
+            
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+        }
         
-        vkCmdDrawIndexed(cmdBuffer, mesh.indices.size(), 1, 0, 0, 0);
     }
 }
 

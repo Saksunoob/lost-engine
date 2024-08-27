@@ -57,21 +57,28 @@ int main() {
         0, 1, 2, 0, 3, 1
     };
 
-    Entity square = main_scene.createEntity();
-    square.addComponent(Mesh(vertices, indices));
-    square.addComponent(Color(1, 0, 0));
-    square.addComponent(GlobalTransform(Vector2(50, 0), Vector2(200, 200), 1));
-    square.addComponent(ZLayer(0, 0.2));
+    Mesh mesh(vertices, indices);
+
+    for (int i = 0; i < 10000; i++) {
+        Entity square = main_scene.createEntity();
+        square.addComponent(mesh);
+        square.addComponent(Color(rand()%2, rand()%2, rand()%2));
+        square.addComponent(GlobalTransform(Vector2(rand()%500-250, rand()%500-250), Vector2(10, 10), 0));
+        square.addComponent(ZLayer(rand()%3, 0.2));
+    }
+    
     std::vector<u_char> noise = PerlinNoise::generate_char(size, freq, seed);
     Texture texture(noise.data(), {size, size}, TextureFormat::Srgb(1));
 
-    Entity square2 = main_scene.createEntity();
-    square2.addComponent(Mesh(vertices, indices));
-    square2.addComponent(UVs(uvs));
-    square2.addComponent(GlobalTransform(Vector2(0, 0), Vector2(500, 500), 0));
-    square2.addComponent(texture);
-    square2.addComponent(ZLayer(0, 0.1));
     
 
+    for (int i = 0; i < 10000; i++) {
+        Entity square2 = main_scene.createEntity();
+        square2.addComponent(mesh);
+        square2.addComponent(UVs(uvs));
+        square2.addComponent(GlobalTransform(Vector2(rand()%500-250, rand()%500-250), Vector2(10, 10), 0));
+        square2.addComponent(texture);
+        square2.addComponent(ZLayer(rand()%3, 0.1));
+    }
     Engine::run();
 }

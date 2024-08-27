@@ -17,6 +17,7 @@ namespace engine {
     struct Color {
         float r, g, b, a;
 
+        Color() : Color(0,0,0,0) {};
         Color(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {};
         Color(float r, float g, float b) : r(r), g(g), b(b), a(1.0) {};
         Color(float brightness) : r(brightness), g(brightness), b(brightness), a(1.0) {};
