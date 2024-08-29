@@ -59,7 +59,7 @@ int main() {
 
     Mesh mesh(vertices, indices);
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 1; i++) {
         Entity square = main_scene.createEntity();
         square.addComponent(mesh);
         square.addComponent(Color(rand()%2, rand()%2, rand()%2));
@@ -68,15 +68,15 @@ int main() {
     }
     
     std::vector<u_char> noise = PerlinNoise::generate_char(size, freq, seed);
-    Texture texture(noise.data(), {size, size}, TextureFormat::Srgb(1));
+    Texture texture("../src/textures/test.png");
 
     
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
         Entity square2 = main_scene.createEntity();
         square2.addComponent(mesh);
         square2.addComponent(UVs(uvs));
-        square2.addComponent(GlobalTransform(Vector2(rand()%500-250, rand()%500-250), Vector2(10, 10), 0));
+        square2.addComponent(GlobalTransform(Vector2(rand()%500-250, rand()%500-250), Vector2(100, 100), 0));
         square2.addComponent(texture);
         square2.addComponent(ZLayer(rand()%3, 0.1));
     }
