@@ -59,9 +59,13 @@ void engine::renderColorMeshes(Scene& scene) {
 }
 
 void engine::renderUVMeshes(Scene& scene) {
-    // TODO: Make batching respect different textures on meshes.
-
     const int ARRAY_SIZE = 10000;
+
+    struct pair_hash {
+        std::size_t operator () (const std::pair<int,TextureData*>& pair) const {
+            return std::hash<int>()(pair.first) ^ (std::hash<TextureData*>()(pair.second) << 1);
+        }
+    };
 
     struct Data {
         glm::mat4 matrix;
@@ -87,18 +91,20 @@ void engine::renderUVMeshes(Scene& scene) {
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<int, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>>> meshes{};
+    std::unordered_map<std::pair<int, TextureData*>, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>>,pair_hash> meshes;
 
     for (unsigned i = 0; i < uvMeshes.size(); i++) {
-        meshes[uvMeshes[i].Get<Mesh>()->mesh_id].push_back(uvMeshes[i]);
+        meshes[{uvMeshes[i].Get<Mesh>()->mesh_id, &uvMeshes[i].Get<Texture>()->getData()}].push_back(uvMeshes[i]);
     }
 
     shader.bind();
-    for (auto& [id, components] : meshes) {
+    for (auto& [key, components] : meshes) {
         int arrays = (components.size()-1)/ARRAY_SIZE+1;
+        TextureData& textureData = *key.second;
+        std::vector<engine::Buffer *> vertex_buffers = {components[0].Get<Mesh>()->vertexBuffer.get(), components[0].Get<UVs>()->vertexBuffer};
 
         for (int a = 0; a < arrays; a++) {
-            shader.bindVertexBuffers({components[0].Get<Mesh>()->vertexBuffer.get(), components[0].Get<UVs>()->vertexBuffer});
+            shader.bindVertexBuffers(vertex_buffers);
             components[0].Get<Mesh>()->indexBuffer->bind();
 
             Data data[ARRAY_SIZE];
@@ -108,7 +114,7 @@ void engine::renderUVMeshes(Scene& scene) {
                 };
             }
             shader.writeUniformBinding(0, 0, &data);
-            shader.writeSamplerBinding(0, 1, components[0].Get<Texture>()->getData());
+            shader.writeSamplerBinding(0, 1, textureData);
             shader.bindSet(0);
             
             vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
