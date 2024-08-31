@@ -1,6 +1,7 @@
 #include "systems.hpp"
 #include "resources.hpp"
 #include "buffer.hpp"
+#include "components.hpp"
 #include <chrono>
 
 void engine::renderColorMeshes(Scene& scene) {
@@ -12,8 +13,8 @@ void engine::renderColorMeshes(Scene& scene) {
         Color color[ARRAY_SIZE];
     };
     static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
-    Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
-    Component<Camera>& cameras = validCameras.Get<Camera>();
+    Components validCameras = scene.GetComponents().With<Camera, GlobalTransform>();
+    Component<Camera> cameras = validCameras.Get<Camera>();
     unsigned main_camera;
     for (int i = 0; i < cameras.size(); i++) {
         if (cameras[i]->main) {
@@ -25,13 +26,13 @@ void engine::renderColorMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, Color>();
+    Components colorMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, Color>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<int, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, Color>>> meshes{};
+    std::unordered_map<int, std::vector<EntityComponents>> meshes{};
 
     for (unsigned i = 0; i < colorMeshes.size(); i++) {
         meshes[colorMeshes[i].Get<Mesh>()->mesh_id].push_back(colorMeshes[i]);
@@ -72,8 +73,8 @@ void engine::renderUVMeshes(Scene& scene) {
     };
 
     static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)*ARRAY_SIZE), Binding::Sampler()});
-    Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
-    Component<Camera>& cameras = validCameras.Get<Camera>();
+    Components validCameras = scene.GetComponents().With<Camera, GlobalTransform>();
+    Component<Camera> cameras = validCameras.Get<Camera>();
     unsigned main_camera;
     for (int i = 0; i < cameras.size(); i++) {
         if (cameras[i]->main) {
@@ -85,13 +86,13 @@ void engine::renderUVMeshes(Scene& scene) {
             return;
         }
     }
-    Components uvMeshes = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>();
+    Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, UVs, Texture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<std::pair<int, TextureData*>, std::vector<EntityComponents<GlobalTransform, ZLayer, Mesh, UVs, Texture>>,pair_hash> meshes;
+    std::unordered_map<std::pair<int, TextureData*>, std::vector<EntityComponents>,pair_hash> meshes;
 
     for (unsigned i = 0; i < uvMeshes.size(); i++) {
         meshes[{uvMeshes[i].Get<Mesh>()->mesh_id, &uvMeshes[i].Get<Texture>()->getData()}].push_back(uvMeshes[i]);
@@ -131,8 +132,8 @@ void engine::renderTileMaps(Scene& scene) {
     };
 
     static Shader shader("shaders/TileMap", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
-    Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
-    Component<Camera>& cameras = validCameras.Get<Camera>();
+    Components validCameras = scene.GetComponents().With<Camera, GlobalTransform>();
+    Component<Camera> cameras = validCameras.Get<Camera>();
     unsigned main_camera;
     for (int i = 0; i < cameras.size(); i++) {
         if (cameras[i]->main) {
@@ -149,8 +150,7 @@ void engine::renderTileMaps(Scene& scene) {
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    Components tilemaps = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, UVs, TileMap, TextureAtlas>();
-
+    Components tilemaps = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, UVs, TileMap, TextureAtlas>();
     shader.bind();
     for (int i = 0; i < tilemaps.size(); i++) {
         shader.bindVertexBuffers({tilemaps[i].Get<Mesh>()->vertexBuffer.get(), tilemaps[i].Get<UVs>()->vertexBuffer});

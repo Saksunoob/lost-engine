@@ -124,6 +124,7 @@ namespace engine {
 
     class UniformBuffer;
     class Buffer;
+    class TextureData;
 
     class Shader {
         const char* shaderPath;

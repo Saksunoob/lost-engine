@@ -1,5 +1,6 @@
 #include "shader.hpp"
 #include "buffer.hpp"
+#include "components.hpp"
 #include <format>
 
 namespace engine {

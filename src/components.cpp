@@ -10,6 +10,10 @@
 
 using namespace engine;
 
+EntityComponents Components::operator[](unsigned index) {
+    return EntityComponents(*this, index);
+}
+
 glm::mat4 Transform::getTransformationMatrix() const {
     glm::mat4 matrix = glm::mat4(1);
     matrix = glm::translate(matrix, glm::vec3(position.x, position.y, 0.0));

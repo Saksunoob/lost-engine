@@ -2,88 +2,87 @@
 
 #include <vector>
 #include <memory>
-#include <tuple>
-#include <any>
 #include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
 #include "utils.hpp"
+#include "scene.hpp"
+#include "component.hpp"
 
 namespace engine {
     class Device;
 
-    template <typename C>
-    class Component {
-        std::vector<std::unique_ptr<std::any>>* components;
-        bool filtered;
+    class EntityComponents;
+
+    class Components {
+        Scene &scene;
         std::vector<unsigned> filter;
 
-        public:
-            Component() : components(nullptr) {};
-            Component(std::vector<std::unique_ptr<std::any>>& components) : components(&components), filtered(false) {};
-            Component(Component& component, const std::vector<unsigned>& filter) : components(component.components), filtered(true), filter(filter) {};
-
-            C* operator[](unsigned index) {
-                if (!components) {
-                    return nullptr;
-                }
-                if (filtered) {
-                    if (index >= filter.size()) {
-                        return nullptr;
-                    }
-                    index = filter[index];
-                }
-                if (index >= components->size() || components->at(index) == nullptr) {
-                    return nullptr;
-                }
-                std::any* component = components->at(index).get();
-                return std::any_cast<C>(component);
+        unsigned index_to_filtered(unsigned index) {
+            if (index >= filter.size()) {
+                Logger::logError("Invalid index for components");
+                return 0;
             }
-
-            unsigned size() {
-                if (!components) {
-                    return 0;
-                }
-                if (filtered) {
-                    return filter.size();
-                }
-                return components->size();
-            }
-    };
-
-    template<typename... C>
-    class EntityComponents {
-        std::tuple<C*...> components;
-
-    public:
-        EntityComponents(C*... comps) : components(comps...) {}
-
-        template<typename T>
-        T* Get() {
-            return std::get<T*>(components);
+            return filter[index];
         }
-    };
-
-    template <typename... C>
-    class Components {
-        std::tuple<Component<C>...> components;
 
         public:
 
-        Components(std::tuple<Component<C>&&...> components) : components(std::move(components)) {};
-        Components(Component<C>&&... components) : components(std::make_tuple(std::move(components)...)) {};
+        Components(Scene& scene) : scene(scene), filter(scene.entity_vector_length) {
+            for (unsigned i = 0; i < filter.size(); i++) {
+                filter[i]=i;
+            }
+        };
 
-        // Indexing operator to return EntityComponents for a given index
-        EntityComponents<C...> operator[](unsigned index) {
-            return EntityComponents<C...>(std::get<Component<C>>(components)[index]...);
+        EntityComponents operator[](unsigned index);
+
+        template<typename... W>
+        Components With() {
+            for (auto it = filter.begin(); it != filter.end();) {
+                bool has = (scene.GetComponent<W>().hasEntity(*it) && ...);
+                if (!has) {
+                    filter.erase(it);
+                    continue;
+                }
+                it++;
+            }
+            
+            return *this;
+        }
+
+        template<typename... W>
+        Components& Without() {
+            for (auto it = filter.begin(); it != filter.end();) {
+                bool has = (scene.GetComponent<W>().hasEntity(*it) && ...);
+                if (has) {
+                    filter.erase(it);
+                    continue;
+                }
+                it++;
+            }
+            
+            return *this;
         }
 
         template<typename T>
-        Component<T>& Get() {
-            return std::get<Component<T>>(components);
+        Component<T> Get() {
+            return scene.GetComponent<T>().withFilter(filter);
         }
 
         unsigned size() {
-            return std::get<0>(components).size();
+            return filter.size();
+        }
+    };
+
+    class EntityComponents {
+        Components& components;
+        unsigned entity;
+
+    public:
+        EntityComponents(Components& comps, unsigned entity) : components(comps), entity(entity) {}
+
+        template<typename T>
+        T* Get() {
+            return components.Get<T>()[entity];
         }
     };
 

@@ -9,7 +9,7 @@
 #include <SDL2/SDL.h>
 
 #include "stage.hpp"
-#include "components.hpp"
+#include "component.hpp"
 
 namespace engine {
 
@@ -27,32 +27,30 @@ namespace engine {
         }
     };
 
+    class Components;
+
     class Scene {
+        friend Components;
+
         std::string name;
         std::vector<Stage> stages = std::vector<Stage>();
-        unsigned entity_vector_length = 0;
         std::vector<unsigned> empty_entity_ids = std::vector<unsigned>();
-        std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
         std::unordered_map<std::type_index, unsigned> component_mapping = std::unordered_map<std::type_index, unsigned>();
         std::unordered_map<std::type_index, std::any> resources{};
 
-        template<typename... C>
-        std::vector<unsigned> FilterValidEntities(std::tuple<Component<C>...>& componentTuples) {
-            std::vector<unsigned> validIndices{};
+        protected:
+        unsigned entity_vector_length = 0;
+        std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
 
-            for (unsigned i = 0; i < entity_vector_length; ++i) {
-                bool isValid = (std::get<Component<C>>(componentTuples)[i] && ...);
-                if (isValid) {
-                    validIndices.push_back(i);
+            template<typename C>
+            Component<C> GetComponent() {
+                auto it = component_mapping.find(std::type_index(typeid(C)));
+                if (it == component_mapping.end()) {
+                    return Component<C>();
                 }
+                unsigned index = it->second;
+                return Component<C>(components[index]);
             }
-            return validIndices;
-        }
-
-        template<typename... C>
-        Components<C...> CreateFilteredComponents(std::tuple<Component<C>...>& componentTuples, const std::vector<unsigned>& validIndices) {
-            return Components<C...>(Component<C>(std::get<Component<C>>(componentTuples), validIndices)...);
-        }
 
         public:
             Scene(std::string name) : name(name) {}
@@ -78,30 +76,8 @@ namespace engine {
                 }
                 components[component_mapping[type]][entity] = std::make_unique<std::any>(std::move(component));
             }
-            template <typename C>
-            void addComponent() {
-                std::type_index type = std::type_index(typeid(C));
-                if (component_mapping.find(type) == component_mapping.end()) {
-                    components.push_back(std::vector<std::unique_ptr<std::any>>(entity_vector_length));
-                    component_mapping[type] = components.size() - 1;
-                }
-            }
-            template<typename C>
-            Component<C> GetComponent() {
-                auto it = component_mapping.find(std::type_index(typeid(C)));
-                if (it == component_mapping.end()) {
-                    return Component<C>();
-                }
-                unsigned index = it->second;
-                return Component<C>(components[index]);
-            }
 
-            template<typename... C>
-            Components<C...> GetWithComponents() {
-                std::tuple<Component<C>...> componentTuples = std::make_tuple(GetComponent<C>()...);
-                std::vector<unsigned> validIndices = FilterValidEntities<C...>(componentTuples);
-                return CreateFilteredComponents<C...>(componentTuples, validIndices);
-            }
+            Components GetComponents();
 
             template<typename R>
             void addResource(R resource) {

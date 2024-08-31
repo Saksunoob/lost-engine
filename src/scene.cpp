@@ -1,4 +1,5 @@
 #include "scene.hpp"
+#include "components.hpp"
 
 using namespace engine;
 
@@ -67,4 +68,8 @@ void Scene::destroyEntity(Entity entity){
         components[i][entity] = std::unique_ptr<std::any>();
         empty_entity_ids.push_back(entity);
     }
+}
+
+Components Scene::GetComponents() {
+    return Components(*this);
 }
