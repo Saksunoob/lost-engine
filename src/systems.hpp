@@ -8,6 +8,7 @@
 namespace engine {
     void renderColorMeshes(Scene& scene);
     void renderUVMeshes(Scene& scene);
+    void renderTileMaps(Scene& scene);
     void timeSystem(Scene& scene);
     void pollSDLEvents(Scene& scene);
 }

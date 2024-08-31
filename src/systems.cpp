@@ -119,7 +119,55 @@ void engine::renderUVMeshes(Scene& scene) {
             
             vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
         }
-        
+    }
+}
+
+void engine::renderTileMaps(Scene& scene) {
+    struct Data {
+        glm::mat4 matrix;
+        glm::ivec2 tilemap_size;
+        glm::ivec2 atlas_size;
+        glm::ivec4 tilemap[256*256/4];
+    };
+
+    static Shader shader("shaders/TileMap", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    Components validCameras = scene.GetWithComponents<Camera, GlobalTransform>();
+    Component<Camera>& cameras = validCameras.Get<Camera>();
+    unsigned main_camera;
+    for (int i = 0; i < cameras.size(); i++) {
+        if (cameras[i]->main) {
+            main_camera = i;
+            break;    
+        }
+        if (i+1 == cameras.size()) {
+            Logger::logWarning("No main camera");
+            return;
+        }
+    }
+
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
+
+    Components tilemaps = scene.GetWithComponents<GlobalTransform, ZLayer, Mesh, UVs, TileMap, TextureAtlas>();
+
+    shader.bind();
+    for (int i = 0; i < tilemaps.size(); i++) {
+        shader.bindVertexBuffers({tilemaps[i].Get<Mesh>()->vertexBuffer.get(), tilemaps[i].Get<UVs>()->vertexBuffer});
+        tilemaps[i].Get<Mesh>()->indexBuffer->bind();
+
+        Data data {
+            proj * tilemaps[i].Get<GlobalTransform>()->getTransformationMatrix(tilemaps[i].Get<ZLayer>()->getZ()),
+            glm::ivec2(tilemaps[i].Get<TileMap>()->size.x, tilemaps[i].Get<TileMap>()->size.y),
+            glm::ivec2(tilemaps[i].Get<TextureAtlas>()->size.x, tilemaps[i].Get<TextureAtlas>()->size.y)
+        };
+
+        memcpy(&data.tilemap, tilemaps[i].Get<TileMap>()->tiles.data(), tilemaps[i].Get<TileMap>()->tiles.size()*sizeof(int)*4);
+
+        shader.writeUniformBinding(0, 0, &data);
+        shader.writeSamplerBinding(0, 1, tilemaps[i].Get<TextureAtlas>()->texture.getData());
+        shader.bindSet(0);
+        vkCmdDrawIndexed(cmdBuffer, tilemaps[i].Get<Mesh>()->indices.size(), 1, 0, 0, 0);
     }
 }
 

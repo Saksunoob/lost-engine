@@ -205,4 +205,18 @@ namespace engine {
 
         std::shared_ptr<TextureData> data;
     };
+
+    struct TileMap {
+        IVector2 size;
+        std::vector<int> tiles;
+
+        TileMap(IVector2 size);
+
+        void setTile(IVector2 pos, int value);
+    };
+
+    struct TextureAtlas {
+        IVector2 size;
+        Texture texture;
+    };
 }

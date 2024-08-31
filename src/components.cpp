@@ -331,3 +331,9 @@ void TextureData::generateMipmaps() {
 
     device.endSingleTimeCommands(commandBuffer);
 }
+
+TileMap::TileMap(IVector2 size) : size(size), tiles(size.x*size.y,-1) {};
+
+void TileMap::setTile(IVector2 pos, int value) {
+    tiles.at(pos.y*size.x+pos.x) = value;
+}
