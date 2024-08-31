@@ -152,8 +152,8 @@ Scene& Engine::addScene(std::string name, bool with_defaults) {
         scene.getStage("init_frame")->addSystem(timeSystem);
         scene.getStage("init_frame")->addSystem(pollSDLEvents);
 
-        //scene.getStage("render")->addSystem(engine::renderColorMeshes);
-        //scene.getStage("render")->addSystem(engine::renderUVMeshes);
+        scene.getStage("render")->addSystem(engine::renderColorMeshes);
+        scene.getStage("render")->addSystem(engine::renderUVMeshes);
         scene.getStage("render")->addSystem(engine::renderTileMaps);
 
         scene.addResource(Time{});

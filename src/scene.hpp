@@ -38,7 +38,7 @@ namespace engine {
 
         template<typename... C>
         std::vector<unsigned> FilterValidEntities(std::tuple<Component<C>...>& componentTuples) {
-            std::vector<unsigned> validIndices;
+            std::vector<unsigned> validIndices{};
 
             for (unsigned i = 0; i < entity_vector_length; ++i) {
                 bool isValid = (std::get<Component<C>>(componentTuples)[i] && ...);
@@ -90,9 +90,7 @@ namespace engine {
             Component<C> GetComponent() {
                 auto it = component_mapping.find(std::type_index(typeid(C)));
                 if (it == component_mapping.end()) {
-                    Logger::logError(std::string("Getting component that doesn't exist [") + std::string(typeid(C).name()) + std::string("]"));
-                    std::vector<std::unique_ptr<std::any>> empty(entity_vector_length);
-                    return Component<C>(empty);
+                    return Component<C>();
                 }
                 unsigned index = it->second;
                 return Component<C>(components[index]);

@@ -13,31 +13,40 @@ namespace engine {
 
     template <typename C>
     class Component {
-        std::vector<std::unique_ptr<std::any>>& components;
+        std::vector<std::unique_ptr<std::any>>* components;
         bool filtered;
         std::vector<unsigned> filter;
 
         public:
-
-            Component(std::vector<std::unique_ptr<std::any>>& components) : components(components), filtered(false) {};
+            Component() : components(nullptr) {};
+            Component(std::vector<std::unique_ptr<std::any>>& components) : components(&components), filtered(false) {};
             Component(Component& component, const std::vector<unsigned>& filter) : components(component.components), filtered(true), filter(filter) {};
 
             C* operator[](unsigned index) {
-                if (filtered) {
-                    index = filter[index];
-                }
-                if (components[index] == nullptr) {
+                if (!components) {
                     return nullptr;
                 }
-                std::any* component = components[index].get();
+                if (filtered) {
+                    if (index >= filter.size()) {
+                        return nullptr;
+                    }
+                    index = filter[index];
+                }
+                if (index >= components->size() || components->at(index) == nullptr) {
+                    return nullptr;
+                }
+                std::any* component = components->at(index).get();
                 return std::any_cast<C>(component);
             }
 
             unsigned size() {
+                if (!components) {
+                    return 0;
+                }
                 if (filtered) {
                     return filter.size();
                 }
-                return components.size();
+                return components->size();
             }
     };
 
