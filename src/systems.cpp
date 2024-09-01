@@ -3,6 +3,7 @@
 #include "buffer.hpp"
 #include "components.hpp"
 #include <chrono>
+#include <functional>
 
 void engine::renderColorMeshes(Scene& scene) {
 
@@ -28,7 +29,7 @@ void engine::renderColorMeshes(Scene& scene) {
     }
     Components colorMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, Color>();
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -88,7 +89,7 @@ void engine::renderUVMeshes(Scene& scene) {
     }
     Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, UVs, Texture>();
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -146,7 +147,7 @@ void engine::renderTileMaps(Scene& scene) {
         }
     }
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(*validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -168,6 +169,72 @@ void engine::renderTileMaps(Scene& scene) {
         shader.writeSamplerBinding(0, 1, tilemaps[i].Get<TextureAtlas>()->texture.getData());
         shader.bindSet(0);
         vkCmdDrawIndexed(cmdBuffer, tilemaps[i].Get<Mesh>()->indices.size(), 1, 0, 0, 0);
+    }
+}
+
+void engine::updateUITransforms(Scene& scene) {
+    IVector2 window_size = Engine::getWindowSize();
+
+    std::function<void(UITransform*)> update_recursively;
+
+    update_recursively = [window_size, &update_recursively](UITransform* transform) {
+        transform->calculateAbsolute(window_size);
+        std::vector<UITransform*> children = transform->getChildren();
+        for (UITransform* child : children) {
+            update_recursively(child);
+        }
+    };
+
+    Components transforms = scene.GetComponents().With<UITransform>();
+    Component<UITransform> transform = transforms.Get<UITransform>();
+    for (int i = 0; i < transform.size(); i++) {
+        if (!transform[i]->getParent()) {
+            update_recursively(transform[i]);
+            
+        }
+    }
+}
+void engine::renderColorUI(Scene& scene) {
+
+    const int ARRAY_SIZE = 10000;
+
+    struct Data {
+        glm::mat4 matrix[ARRAY_SIZE];
+        Color color[ARRAY_SIZE];
+    };
+    static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
+
+    Components colorMeshes = scene.GetComponents().With<UITransform, Mesh, Color>();
+
+    glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
+
+    std::unordered_map<int, std::vector<EntityComponents>> meshes{};
+
+    for (unsigned i = 0; i < colorMeshes.size(); i++) {
+        meshes[colorMeshes[i].Get<Mesh>()->mesh_id].push_back(colorMeshes[i]);
+    }
+
+
+    shader.bind();
+    for (auto& [id, components] : meshes) {
+        int arrays = (components.size()-1)/ARRAY_SIZE+1;
+
+        for (int a = 0; a < arrays; a++) {
+            components[0].Get<Mesh>()->vertexBuffer->bind();
+            components[0].Get<Mesh>()->indexBuffer->bind();
+
+            Data data;
+            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
+                data.matrix[i] = proj * components[a*ARRAY_SIZE+i].Get<UITransform>()->getAbsoute().getTransformationMatrix(0.5);
+                data.color[i] = *components[a*ARRAY_SIZE+i].Get<Color>();
+            }
+            shader.writeUniformBinding(0, 0, &data);
+            shader.bindSet(0);
+            
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+        }
     }
 }
 

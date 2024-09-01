@@ -63,8 +63,11 @@ float ZLayer::getZ() {
     return rel_layer*layer_width+order*layer_width;
 }
 
-glm::mat4 Camera::getProjectionMatrix(const Transform& transform, IVector2 window_size) {
-    glm::mat4 matrix = transform.getTransformationMatrix();
+glm::mat4 Camera::getProjectionMatrix(const Transform* transform, IVector2 window_size) {
+    glm::mat4 matrix(1.0);
+    if (transform) {
+        transform->getTransformationMatrix();
+    }
     matrix = glm::scale(matrix, glm::vec3(window_size.x/2.0, window_size.y/2.0, 1.0));
 
     return glm::inverse(matrix);
@@ -340,4 +343,59 @@ TileMap::TileMap(IVector2 size) : size(size), tiles(size.x*size.y,-1) {};
 
 void TileMap::setTile(IVector2 pos, int value) {
     tiles.at(pos.y*size.x+pos.x) = value;
+}
+
+void UITransform::addChild(UITransform& child) {
+    children.push_back(&child);
+    if (child.parent) {
+        child.parent->removeChild(child);
+    }
+    child.parent = this;
+}
+
+void UITransform::removeChild(UITransform& child) {
+    for (auto it = children.begin(); it < children.end(); it++) {
+        if (*it.base() == &child) {
+            children.erase(it);
+            return;
+        }
+    }
+}
+
+std::vector<UITransform*> UITransform::getChildren() {
+    return children;
+}
+
+UITransform* UITransform::getParent() {
+    return parent;
+}
+
+void UITransform::calculateAbsolute(IVector2 window_size) {
+    Transform root({0, 0}, {0, 0}, 0);
+    if (parent) {
+        root = parent->absolute;
+    } else {
+        root.scale = Vector2(window_size.x, window_size.y);
+    }
+
+    switch (position_type) {
+        case UNIT_PERCENT:
+            absolute.position = root.position + (position/100*root.scale).rotate(root.rotation);
+            break;
+        case UNIT_PIXELS:
+            absolute.position = root.position + position.rotate(root.rotation);
+            break;
+    }
+
+    if (size_type == UNIT_PERCENT) {
+        absolute.scale = root.scale * (size/100.);
+    } else if (position_type == UNIT_PIXELS) {
+        absolute.scale = size;
+    }
+
+    absolute.rotation = root.rotation + rotation;
+}
+
+Transform UITransform::getAbsoute() {
+    return absolute;
 }

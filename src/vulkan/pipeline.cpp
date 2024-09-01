@@ -69,7 +69,7 @@ PipelineConfig PipelineConfig::defaultConfig(unsigned width, unsigned height) {
     config.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     config.depthStencilInfo.depthTestEnable = VK_TRUE;
     config.depthStencilInfo.depthWriteEnable = VK_TRUE;
-    config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+    config.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     config.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
     config.depthStencilInfo.minDepthBounds = 0.0f;  // Optional
     config.depthStencilInfo.maxDepthBounds = 1.0f;  // Optional

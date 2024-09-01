@@ -5,6 +5,33 @@ namespace engine {
         float x,y;
 
         Vector2(float x, float y) : x(x), y(y) {};
+
+        Vector2 operator+(Vector2 other) {
+            return Vector2(x+other.x,y+other.y);
+        }
+        Vector2 operator-(Vector2 other) {
+            return Vector2(x-other.x,y-other.y);
+        }
+        Vector2 operator-() {
+            return Vector2(-x,-y);
+        }
+        Vector2 operator*(Vector2 other) {
+            return Vector2(x*other.x,y*other.y);
+        }
+        Vector2 operator/(Vector2 other) {
+            return Vector2(x/other.x,y/other.y);
+        }
+        Vector2 operator*(float other) {
+            return Vector2(x*other,y*other);
+        }
+        Vector2 operator/(float other) {
+            return Vector2(x/other,y/other);
+        }
+        Vector2 rotate(float radians) {
+            float cs = cos(radians);
+            float sn = sin(radians);
+            return Vector2(x*cs-y*sn, x*sn+y*cs);
+        }
     };
 
     struct IVector2 {

@@ -20,7 +20,7 @@ namespace engine {
         Scene& scene;
 
         template <typename C>
-        void addComponent(C component);
+        C& addComponent(C component);
 
         operator unsigned() const{
             return id;
@@ -68,13 +68,14 @@ namespace engine {
             void destroyEntity(Entity entity);
 
             template <typename C>
-            void addComponent(Entity entity, C component) {
+            C& addComponent(Entity entity, C component) {
                 std::type_index type = std::type_index(typeid(C));
                 if (component_mapping.find(type) == component_mapping.end()) {
                     components.push_back(std::vector<std::unique_ptr<std::any>>(entity_vector_length));
                     component_mapping[type] = components.size() - 1;
                 }
                 components[component_mapping[type]][entity] = std::make_unique<std::any>(std::move(component));
+                return *std::any_cast<C>(components[component_mapping[type]][entity].get());
             }
 
             Components GetComponents();
@@ -93,7 +94,7 @@ namespace engine {
     };
 
     template <typename C>
-    void Entity::addComponent(C component) {
-        scene.addComponent(*this, component);
+    C& Entity::addComponent(C component) {
+        return scene.addComponent(*this, component);
     }
 }

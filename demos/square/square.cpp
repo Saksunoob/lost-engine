@@ -27,21 +27,17 @@ int main() {
     };
 
     Mesh mesh(vertices, indices);
-    Texture atlas("../src/textures/test.png");
 
-    Entity tilemap = main_scene.createEntity();
+    Entity ui1 = main_scene.createEntity();
+    UITransform& parent = ui1.addComponent(UITransform(UNIT_PERCENT, Vector2(0, 0), UNIT_PERCENT, Vector2(50, 50), 0));
+    ui1.addComponent(mesh);
+    ui1.addComponent(Color(1, 0, 0));
 
-    TileMap tilemap_c({5,5});
-    for (int i = 0; i < 25; i++) {
-        tilemap_c.setTile({i%5,i/5},i%4);
-    }
-
-    tilemap.addComponent(GlobalTransform({0, 0}, {200, 200}, 0));
-    tilemap.addComponent(ZLayer(0,0));
-    tilemap.addComponent(mesh);
-    tilemap.addComponent(UVs(uvs));
-    tilemap.addComponent(tilemap_c);
-    tilemap.addComponent(TextureAtlas{{2,2},atlas});
+    Entity ui2 = main_scene.createEntity();
+    UITransform& child = ui2.addComponent(UITransform(UNIT_PERCENT, Vector2(25, 25), UNIT_PERCENT, Vector2(50, 50), 0));
+    parent.addChild(child);
+    ui2.addComponent(mesh);
+    ui2.addComponent(Color(0, 0, 1));
 
     Engine::run();
 }

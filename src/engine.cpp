@@ -147,14 +147,18 @@ Scene& Engine::addScene(std::string name, bool with_defaults) {
     }
     if (with_defaults) {
         scene.addStageAt("init_frame", 0);
-        scene.addStageAfter("render", "init_frame");
+        scene.addStageAfter("update", "init_frame");
+        scene.addStageAfter("render", "update");
 
         scene.getStage("init_frame")->addSystem(timeSystem);
         scene.getStage("init_frame")->addSystem(pollSDLEvents);
 
+        scene.getStage("update")->addSystem(updateUITransforms);
+
         scene.getStage("render")->addSystem(engine::renderColorMeshes);
         scene.getStage("render")->addSystem(engine::renderUVMeshes);
         scene.getStage("render")->addSystem(engine::renderTileMaps);
+        scene.getStage("render")->addSystem(engine::renderColorUI);
 
         scene.addResource(Time{});
         scene.addResource(Input{});

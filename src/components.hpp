@@ -150,7 +150,7 @@ namespace engine {
 
         Camera(bool main) : main(main) {};
 
-        static glm::mat4 getProjectionMatrix(const Transform& transform, IVector2 window_size);
+        static glm::mat4 getProjectionMatrix(const Transform* transform, IVector2 window_size);
     };
 
     struct TextureFormat {
@@ -226,5 +226,31 @@ namespace engine {
     struct TextureAtlas {
         IVector2 size;
         Texture texture;
+    };
+
+    enum UnitType {
+        UNIT_PERCENT,
+        UNIT_PIXELS,
+    };
+
+    struct UITransform {
+        UnitType position_type, size_type;
+        Vector2 position, size;
+        float rotation;
+
+        UITransform(UnitType position_type, Vector2 position, UnitType size_type, Vector2 size, float rotation) : 
+            position_type(position_type), size_type(size_type), position(position), size(size), rotation(rotation), absolute(position, size, rotation), parent(nullptr) {};
+
+        void addChild(UITransform&);
+        void removeChild(UITransform&);
+        std::vector<UITransform*> getChildren();
+        UITransform* getParent();
+        Transform getAbsoute();
+        void calculateAbsolute(IVector2 window_size);
+
+        private:
+            Transform absolute;
+            UITransform* parent;
+            std::vector<UITransform*> children;
     };
 }
