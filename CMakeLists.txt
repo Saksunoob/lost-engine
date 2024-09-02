@@ -47,7 +47,15 @@ include_directories(${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/demos ${PROJ
 file(GLOB_RECURSE SOURCES "src/*.cpp" "demos/square/*.cpp")
 
 # Add the executable
-add_executable(LostEngine ${SOURCES})
+add_executable(LostEngineDemo ${SOURCES})
+
+# Link SDL2
+target_link_libraries(LostEngineDemo ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES})
+
+file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
+
+# Add the library
+add_library(LostEngine STATIC ${LIB_SOURCES})
 
 # Link SDL2
 target_link_libraries(LostEngine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES})
