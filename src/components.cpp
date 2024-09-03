@@ -73,36 +73,6 @@ glm::mat4 Camera::getProjectionMatrix(const Transform* transform, IVector2 windo
     return glm::inverse(matrix);
 }
 
-int Mesh::mesh_id_counter = 0;
-
-Mesh::Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices) : vertices(vertices), indices(indices), mesh_id(mesh_id_counter++) {
-    vertexBuffer = std::make_shared<VertexBuffer>(sizeof(glm::vec2), true);
-    vertexBuffer->setVector(vertices.data(), vertices.size());
-
-    indexBuffer = std::make_shared<IndexBuffer>(sizeof(unsigned), true);
-    indexBuffer->setVector(indices.data(), indices.size());
-}
-
-UVs::UVs(std::vector<Vector2> uvs) : uvs(uvs) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2),true);
-    vertexBuffer->setVector(uvs.data(), uvs.size());
-}
-
-UVs::UVs(const UVs& other) : uvs(other.uvs) {
-    vertexBuffer = new VertexBuffer(sizeof(glm::vec2),true);
-    vertexBuffer->setVector(uvs.data(), uvs.size());
-}
-
-UVs::UVs(UVs&& other) : uvs(other.uvs), vertexBuffer(other.vertexBuffer) {
-    other.vertexBuffer = nullptr;
-}
-
-UVs::~UVs()  {
-    if (vertexBuffer) {
-        delete vertexBuffer;
-    }
-}
-
 TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) : size(size), format(format) {
     mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.x, size.y)))) + 1;
 

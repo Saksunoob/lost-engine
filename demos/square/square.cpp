@@ -10,33 +10,35 @@ int main() {
     camera.addComponent(Camera(true));
     camera.addComponent(GlobalTransform(Vector2(0, 0), Vector2(1, 1), 0));
 
-    std::vector<Vector2> vertices = {
+    Vertices vertices({
         {0.5, 0.5},
         {-0.5, -0.5},
         {0.5, -0.5},
         {-0.5, 0.5}
-    };
-    std::vector<Vector2> uvs {
+    });
+    UVs uvs({
         {1, 1},
         {0, 0},
         {1, 0},
         {0, 1}
-    };
-    std::vector<unsigned> indices = {
+    });
+    Indices indices({
         0, 1, 2, 0, 3, 1
-    };
+    });
 
-    Mesh mesh(vertices, indices);
+    
 
     Entity ui1 = main_scene.createEntity();
     UITransform& parent = ui1.addComponent(UITransform(UNIT_PERCENT, Vector2(0, 0), UNIT_PERCENT, Vector2(50, 50), 0));
-    ui1.addComponent(mesh);
+    ui1.addComponent(vertices);
+    ui1.addComponent(indices);
     ui1.addComponent(Color(1, 0, 0));
 
     Entity ui2 = main_scene.createEntity();
     UITransform& child = ui2.addComponent(UITransform(UNIT_PERCENT, Vector2(25, 25), UNIT_PERCENT, Vector2(50, 50), 0));
     parent.addChild(child);
-    ui2.addComponent(mesh);
+    ui2.addComponent(vertices);
+    ui2.addComponent(indices);
     ui2.addComponent(Color(0, 0, 1));
 
     Engine::run();

@@ -58,6 +58,6 @@ file(GLOB_RECURSE LIB_SOURCES "src/*.cpp")
 add_library(LostEngine STATIC ${LIB_SOURCES})
 
 # Link SDL2
-target_link_libraries(LostEngine ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES})
+target_link_libraries(LostEngine PUBLIC ${SDL2_LIBRARIES} ${Vulkan_LIBRARIES})
 
 add_dependencies(${PROJECT_NAME} build_shaders)

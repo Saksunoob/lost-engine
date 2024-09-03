@@ -54,4 +54,26 @@ namespace engine {
         static std::vector<u_char> generate_char(int n, float freq, float seed);
         static std::vector<float> generate(int n, float freq, float seed);
     };
+
+    template <typename T>
+    inline void hash_combine(std::size_t& seed, const T& v)
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+    }
+
+    template<typename Tuple, std::size_t... Is>
+    inline void hash_tuple_combine_impl(std::size_t& seed, const Tuple& tuple, std::index_sequence<Is...>)
+    {
+        (..., hash_combine(seed, std::get<Is>(tuple)));
+    }
+
+    template <typename... T>
+    struct tuple_hash {
+        std::size_t operator () (const std::tuple<T...>& tuple) const {
+            std::size_t seed = 0;
+            hash_tuple_combine_impl(seed, tuple, std::make_index_sequence<sizeof...(T)>{});
+            return seed;
+        }
+    };
 }

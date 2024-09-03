@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
 #include "utils.hpp"
+#include "buffer.hpp"
 #include "scene.hpp"
 #include "component.hpp"
 
@@ -115,34 +116,37 @@ namespace engine {
         static int max_layer;
     };
 
-    class VertexBuffer;
-    class IndexBuffer;
+    template <typename B>
+    struct RenderData {
+        const int id;
+        const int item_count;
 
-    struct Mesh {
-        const std::vector<Vector2> vertices;
-        const std::vector<unsigned> indices;
-        const int mesh_id;
+        template<typename T>
+        RenderData(std::vector<T> buffer_data) : id(id_counter++), item_count(buffer_data.size()) {
+            buffer = std::make_shared<B>(sizeof(T), true);
+            buffer->setVector(buffer_data.data(), buffer_data.size());
+        }
 
-        std::shared_ptr<VertexBuffer> vertexBuffer = nullptr;
-        std::shared_ptr<IndexBuffer> indexBuffer = nullptr;
-
-        Mesh(std::vector<Vector2> vertices, std::vector<unsigned> indices);
+        B* getBuffer() {return buffer.get();}
 
         private:
-            static int mesh_id_counter;
+            static int id_counter;
+            std::shared_ptr<B> buffer = nullptr;
     };
 
-    struct UVs {
-        std::vector<Vector2> uvs;
+    template<typename B>
+    int RenderData<B>::id_counter = 0;
 
-        VertexBuffer* vertexBuffer = nullptr;
+    struct Vertices : public RenderData<VertexBuffer> {
+        Vertices(std::vector<Vector2> vertices) : RenderData(vertices) {};
+    };
 
-        UVs(std::vector<Vector2> uvs);
+    struct Indices : public RenderData<IndexBuffer> {
+        Indices(std::vector<unsigned> indices) : RenderData(indices) {};
+    };
 
-        UVs(const UVs&);
-        UVs(UVs&&);
-
-        ~UVs();
+    struct UVs : public RenderData<VertexBuffer> {
+        UVs(std::vector<Vector2> uvs) : RenderData(uvs) {};
     };
 
     struct Camera {

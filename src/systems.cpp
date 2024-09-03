@@ -27,16 +27,18 @@ void engine::renderColorMeshes(Scene& scene) {
             return;
         }
     }
-    Components colorMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, Color>();
+    Components colorMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, Color>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<int, std::vector<EntityComponents>> meshes{};
+    std::unordered_map<long, std::vector<EntityComponents>> meshes{};
 
     for (unsigned i = 0; i < colorMeshes.size(); i++) {
-        meshes[colorMeshes[i].Get<Mesh>()->mesh_id].push_back(colorMeshes[i]);
+        long vertex_id = colorMeshes[i].Get<Vertices>()->id;
+        long index_id = colorMeshes[i].Get<Indices>()->id;
+        meshes[vertex_id << 32 | index_id].push_back(colorMeshes[i]);
     }
 
     shader.bind();
@@ -44,8 +46,8 @@ void engine::renderColorMeshes(Scene& scene) {
         int arrays = (components.size()-1)/ARRAY_SIZE+1;
 
         for (int a = 0; a < arrays; a++) {
-            components[0].Get<Mesh>()->vertexBuffer->bind();
-            components[0].Get<Mesh>()->indexBuffer->bind();
+            components[0].Get<Vertices>()->getBuffer()->bind();
+            components[0].Get<Indices>()->getBuffer()->bind();
 
             Data data;
             for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
@@ -55,19 +57,13 @@ void engine::renderColorMeshes(Scene& scene) {
             shader.writeUniformBinding(0, 0, &data);
             shader.bindSet(0);
             
-            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
         }
     }
 }
 
 void engine::renderUVMeshes(Scene& scene) {
     const int ARRAY_SIZE = 10000;
-
-    struct pair_hash {
-        std::size_t operator () (const std::pair<int,TextureData*>& pair) const {
-            return std::hash<int>()(pair.first) ^ (std::hash<TextureData*>()(pair.second) << 1);
-        }
-    };
 
     struct Data {
         glm::mat4 matrix;
@@ -87,27 +83,30 @@ void engine::renderUVMeshes(Scene& scene) {
             return;
         }
     }
-    Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, UVs, Texture>();
+    Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, Texture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<std::pair<int, TextureData*>, std::vector<EntityComponents>,pair_hash> meshes;
+    std::unordered_map<std::tuple<int, int, int, TextureData*>, std::vector<EntityComponents>, tuple_hash<int, int, int, TextureData*>> meshes;
 
     for (unsigned i = 0; i < uvMeshes.size(); i++) {
-        meshes[{uvMeshes[i].Get<Mesh>()->mesh_id, &uvMeshes[i].Get<Texture>()->getData()}].push_back(uvMeshes[i]);
+        int vertex_id = uvMeshes[i].Get<Vertices>()->id;
+        int index_id = uvMeshes[i].Get<Indices>()->id;
+        int uv_id = uvMeshes[i].Get<UVs>()->id;
+        meshes[{vertex_id, index_id, uv_id, &uvMeshes[i].Get<Texture>()->getData()}].push_back(uvMeshes[i]);
     }
 
     shader.bind();
     for (auto& [key, components] : meshes) {
         int arrays = (components.size()-1)/ARRAY_SIZE+1;
-        TextureData& textureData = *key.second;
-        std::vector<engine::Buffer *> vertex_buffers = {components[0].Get<Mesh>()->vertexBuffer.get(), components[0].Get<UVs>()->vertexBuffer};
+        TextureData& textureData = *std::get<TextureData*>(key);
+        std::vector<engine::Buffer *> vertex_buffers = {components[0].Get<Vertices>()->getBuffer(), components[0].Get<UVs>()->getBuffer()};
 
         for (int a = 0; a < arrays; a++) {
             shader.bindVertexBuffers(vertex_buffers);
-            components[0].Get<Mesh>()->indexBuffer->bind();
+            components[0].Get<Indices>()->getBuffer()->bind();
 
             Data data[ARRAY_SIZE];
             for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
@@ -119,7 +118,7 @@ void engine::renderUVMeshes(Scene& scene) {
             shader.writeSamplerBinding(0, 1, textureData);
             shader.bindSet(0);
             
-            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
         }
     }
 }
@@ -151,11 +150,11 @@ void engine::renderTileMaps(Scene& scene) {
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    Components tilemaps = scene.GetComponents().With<GlobalTransform, ZLayer, Mesh, UVs, TileMap, TextureAtlas>();
+    Components tilemaps = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, TileMap, TextureAtlas>();
     shader.bind();
     for (int i = 0; i < tilemaps.size(); i++) {
-        shader.bindVertexBuffers({tilemaps[i].Get<Mesh>()->vertexBuffer.get(), tilemaps[i].Get<UVs>()->vertexBuffer});
-        tilemaps[i].Get<Mesh>()->indexBuffer->bind();
+        shader.bindVertexBuffers({tilemaps[i].Get<Vertices>()->getBuffer(), tilemaps[i].Get<UVs>()->getBuffer()});
+        tilemaps[i].Get<Indices>()->getBuffer()->bind();
 
         Data data {
             proj * tilemaps[i].Get<GlobalTransform>()->getTransformationMatrix(tilemaps[i].Get<ZLayer>()->getZ()),
@@ -168,7 +167,7 @@ void engine::renderTileMaps(Scene& scene) {
         shader.writeUniformBinding(0, 0, &data);
         shader.writeSamplerBinding(0, 1, tilemaps[i].Get<TextureAtlas>()->texture.getData());
         shader.bindSet(0);
-        vkCmdDrawIndexed(cmdBuffer, tilemaps[i].Get<Mesh>()->indices.size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmdBuffer, tilemaps[i].Get<Indices>()->item_count, 1, 0, 0, 0);
     }
 }
 
@@ -204,16 +203,18 @@ void engine::renderColorUI(Scene& scene) {
     };
     static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
 
-    Components colorMeshes = scene.GetComponents().With<UITransform, Mesh, Color>();
+    Components colorMeshes = scene.GetComponents().With<UITransform, Vertices, Indices, Color>();
 
     glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
-    std::unordered_map<int, std::vector<EntityComponents>> meshes{};
+    std::unordered_map<long, std::vector<EntityComponents>> meshes{};
 
     for (unsigned i = 0; i < colorMeshes.size(); i++) {
-        meshes[colorMeshes[i].Get<Mesh>()->mesh_id].push_back(colorMeshes[i]);
+        long vertex_id = colorMeshes[i].Get<Vertices>()->id;
+        long index_id = colorMeshes[i].Get<Indices>()->id;
+        meshes[vertex_id << 32 | index_id].push_back(colorMeshes[i]);
     }
 
 
@@ -222,8 +223,8 @@ void engine::renderColorUI(Scene& scene) {
         int arrays = (components.size()-1)/ARRAY_SIZE+1;
 
         for (int a = 0; a < arrays; a++) {
-            components[0].Get<Mesh>()->vertexBuffer->bind();
-            components[0].Get<Mesh>()->indexBuffer->bind();
+            components[0].Get<Vertices>()->getBuffer()->bind();
+            components[0].Get<Indices>()->getBuffer()->bind();
 
             Data data;
             for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
@@ -233,7 +234,7 @@ void engine::renderColorUI(Scene& scene) {
             shader.writeUniformBinding(0, 0, &data);
             shader.bindSet(0);
             
-            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Mesh>()->indices.size(), components.size()-a*ARRAY_SIZE, 0, 0, 0);
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
         }
     }
 }
