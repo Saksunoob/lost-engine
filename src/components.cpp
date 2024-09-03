@@ -324,6 +324,57 @@ void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
         root.scale = Vector2(window_size.x, window_size.y);
     }
 
+    switch (size_type) {
+        case UNIT_PERCENT:
+            absolute.scale = root.scale * (size/100.);
+            break;
+        case UNIT_PIXELS:
+            absolute.scale = size;
+    }
+
+    absolute.rotation = root.rotation + rotation;
+
+    Vector2 anchor_mod{0, 0};
+
+    switch (anchor.horizontal) {
+        case POINT_LEFT:
+            anchor_mod.x -= root.scale.x/2.;
+            break;
+        case POINT_RIGHT:
+            anchor_mod.x += root.scale.x/2.;
+            break;
+    }
+    switch (anchor.vertical) {
+        case POINT_TOP:
+            anchor_mod.y -= root.scale.y/2.;
+            break;
+        case POINT_BOTTOM:
+            anchor_mod.y += root.scale.y/2.;
+            break;
+    }
+
+    root.position = root.position + anchor_mod.rotate(root.rotation);
+
+    Vector2 origin_mod{0, 0};
+    switch (origin.horizontal) {
+        case POINT_LEFT:
+            origin_mod.x += absolute.scale.x/2.;
+            break;
+        case POINT_RIGHT:
+            origin_mod.x -= absolute.scale.x/2.;
+            break;
+    }
+    switch (origin.vertical) {
+        case POINT_TOP:
+            origin_mod.y += absolute.scale.y/2.;
+            break;
+        case POINT_BOTTOM:
+            origin_mod.y -= absolute.scale.y/2.;
+            break;
+    }
+
+    root.position = root.position + origin_mod.rotate(absolute.rotation);
+
     switch (position_type) {
         case UNIT_PERCENT:
             absolute.position = root.position + (position/100*root.scale).rotate(root.rotation);
@@ -332,14 +383,6 @@ void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
             absolute.position = root.position + position.rotate(root.rotation);
             break;
     }
-
-    if (size_type == UNIT_PERCENT) {
-        absolute.scale = root.scale * (size/100.);
-    } else if (position_type == UNIT_PIXELS) {
-        absolute.scale = size;
-    }
-
-    absolute.rotation = root.rotation + rotation;
 }
 
 Transform UITransform::getAbsoute() {

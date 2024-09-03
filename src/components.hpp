@@ -241,13 +241,39 @@ namespace engine {
         UNIT_PIXELS,
     };
 
+    enum PointAxis {
+        POINT_LEFT,
+        POINT_MIDDLE,
+        POINT_RIGHT,
+        POINT_TOP=POINT_LEFT,
+        POINT_BOTTOM=POINT_RIGHT
+    };
+
+    struct Point {
+        PointAxis horizontal, vertical;
+
+        static inline Point topLeft() {return {POINT_LEFT, POINT_TOP};};
+        static inline Point top() {return {POINT_MIDDLE, POINT_TOP};};
+        static inline Point topRight() {return {POINT_RIGHT, POINT_TOP};};
+        static inline Point left() {return {POINT_LEFT, POINT_MIDDLE};};
+        static inline Point center() {return {POINT_MIDDLE, POINT_MIDDLE};};
+        static inline Point right() {return {POINT_RIGHT, POINT_MIDDLE};};
+        static inline Point bottomLeft() {return {POINT_LEFT, POINT_BOTTOM};};
+        static inline Point bottom() {return {POINT_MIDDLE, POINT_BOTTOM};};
+        static inline Point bottomRight() {return {POINT_RIGHT, POINT_BOTTOM};};
+    };
+
     struct UITransform {
+        Point origin, anchor;
         UnitType position_type, size_type;
         Vector2 position, size;
         float rotation;
 
-        UITransform(UnitType position_type, Vector2 position, UnitType size_type, Vector2 size, float rotation) : 
-            position_type(position_type), size_type(size_type), position(position), size(size), rotation(rotation), absolute(position, size, rotation) {};
+        UITransform(Point origin, Point anchor, UnitType position_type, Vector2 position, UnitType size_type, Vector2 size, float rotation) : 
+            origin(origin), anchor(anchor),
+            position_type(position_type), size_type(size_type),
+            position(position), size(size), rotation(rotation), 
+            absolute(position, size, rotation) {};
 
         Transform getAbsoute();
         void calculateAbsolute(IVector2 window_size, Entity entity);
