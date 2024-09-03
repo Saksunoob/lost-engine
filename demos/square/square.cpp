@@ -16,9 +16,8 @@ int main() {
     ui1.addBundle(Bundles::quadMeshBundle());
     ui1.addComponent(Color(1, 0, 0));
 
-    Entity ui2 = main_scene.createEntity();
+    Entity ui2 = main_scene.createEntity(ui1);
     ui2.addComponent(UITransform(UNIT_PERCENT, Vector2(25, 25), UNIT_PERCENT, Vector2(50, 50), 0));
-    ui1.getComponent<UITransform>()->addChild(*ui2.getComponent<UITransform>());
     ui2.addBundle(Bundles::quadMeshBundle());
     ui2.addComponent(Color(0, 0, 1));
 

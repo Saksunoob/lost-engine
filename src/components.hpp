@@ -72,6 +72,10 @@ namespace engine {
         unsigned size() {
             return filter.size();
         }
+
+        Entity getEntity(unsigned index) {
+            return {filter[index]+1, scene};
+        }
     };
 
     class EntityComponents {
@@ -243,18 +247,12 @@ namespace engine {
         float rotation;
 
         UITransform(UnitType position_type, Vector2 position, UnitType size_type, Vector2 size, float rotation) : 
-            position_type(position_type), size_type(size_type), position(position), size(size), rotation(rotation), absolute(position, size, rotation), parent(nullptr) {};
+            position_type(position_type), size_type(size_type), position(position), size(size), rotation(rotation), absolute(position, size, rotation) {};
 
-        void addChild(UITransform&);
-        void removeChild(UITransform&);
-        std::vector<UITransform*> getChildren();
-        UITransform* getParent();
         Transform getAbsoute();
-        void calculateAbsolute(IVector2 window_size);
+        void calculateAbsolute(IVector2 window_size, Entity entity);
 
         private:
             Transform absolute;
-            UITransform* parent;
-            std::vector<UITransform*> children;
     };
 }

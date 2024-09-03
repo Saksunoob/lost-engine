@@ -26,8 +26,14 @@ namespace engine {
         C* getComponent();
         void addBundle(Bundle& bundle);
 
+        void addChild(Entity child);
+        Entity getParent();
+        std::vector<Entity> getChildren();
+
+        bool isNull() {return id==0;};
+
         operator unsigned() const{
-            return id;
+            return id-1;
         }
     };
 
@@ -46,6 +52,13 @@ namespace engine {
         unsigned entity_vector_length = 0;
         std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
 
+        struct Hierarchy {
+            unsigned parent;
+            std::vector<unsigned> children;
+        };
+
+        std::vector<Hierarchy> entity_hierarchy;
+
         public:
             Scene(std::string name) : name(name) {}
             Scene() : name("empty_scene") {}
@@ -59,7 +72,12 @@ namespace engine {
             Stage* getStage(std::string stage);
 
             Entity createEntity();
+            Entity createEntity(Entity parent);
             void destroyEntity(Entity entity);
+
+            void addChild(Entity parent, Entity child);
+            Entity getParent(Entity);
+            std::vector<Entity> getChildren(Entity);
 
             template <typename C>
             C& addComponent(Entity entity, C component) {
@@ -106,6 +124,9 @@ namespace engine {
 
     template <typename C>
     C* Entity::getComponent() {
-        return scene.GetComponent<C>().getUnfiltered(id);
+        if (isNull()) {
+            return nullptr;
+        }
+        return scene.GetComponent<C>().getUnfiltered(id-1);
     }
 }

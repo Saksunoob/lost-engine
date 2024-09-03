@@ -315,34 +315,10 @@ void TileMap::setTile(IVector2 pos, int value) {
     tiles.at(pos.y*size.x+pos.x) = value;
 }
 
-void UITransform::addChild(UITransform& child) {
-    children.push_back(&child);
-    if (child.parent) {
-        child.parent->removeChild(child);
-    }
-    child.parent = this;
-}
-
-void UITransform::removeChild(UITransform& child) {
-    for (auto it = children.begin(); it < children.end(); it++) {
-        if (*it.base() == &child) {
-            children.erase(it);
-            return;
-        }
-    }
-}
-
-std::vector<UITransform*> UITransform::getChildren() {
-    return children;
-}
-
-UITransform* UITransform::getParent() {
-    return parent;
-}
-
-void UITransform::calculateAbsolute(IVector2 window_size) {
+void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
     Transform root({0, 0}, {0, 0}, 0);
-    if (parent) {
+    UITransform* parent = entity.getParent().getComponent<UITransform>();
+    if (parent != nullptr) {
         root = parent->absolute;
     } else {
         root.scale = Vector2(window_size.x, window_size.y);

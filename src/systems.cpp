@@ -174,22 +174,24 @@ void engine::renderTileMaps(Scene& scene) {
 void engine::updateUITransforms(Scene& scene) {
     IVector2 window_size = Engine::getWindowSize();
 
-    std::function<void(UITransform*)> update_recursively;
+    std::function<void(UITransform*, Entity entity)> update_recursively;
 
-    update_recursively = [window_size, &update_recursively](UITransform* transform) {
-        transform->calculateAbsolute(window_size);
-        std::vector<UITransform*> children = transform->getChildren();
-        for (UITransform* child : children) {
-            update_recursively(child);
+    update_recursively = [window_size, &update_recursively](UITransform* transform, Entity entity) {
+        transform->calculateAbsolute(window_size, entity);
+        std::vector<Entity> children = entity.getChildren();
+        for (Entity& child : children) {
+            UITransform* child_transform = child.getComponent<UITransform>();
+            if (child_transform != nullptr) {
+                update_recursively(child_transform, child);
+            }
         }
     };
 
     Components transforms = scene.GetComponents().With<UITransform>();
     Component<UITransform> transform = transforms.Get<UITransform>();
     for (int i = 0; i < transform.size(); i++) {
-        if (!transform[i]->getParent()) {
-            update_recursively(transform[i]);
-            
+        if (transforms.getEntity(i).getParent().isNull()) {
+            update_recursively(transform[i], transforms.getEntity(i));
         }
     }
 }
