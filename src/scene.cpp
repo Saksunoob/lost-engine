@@ -3,6 +3,10 @@
 
 using namespace engine;
 
+void Entity::addBundle(Bundle& bundle) {
+    scene.addBundle(*this, bundle);
+};
+
 void Scene::executeStages(){
     for (Stage stage : this->stages) {
         stage.execute(*this);
@@ -67,6 +71,16 @@ void Scene::destroyEntity(Entity entity){
     for (unsigned i = 0; i < components.size(); i++) {
         components[i][entity] = std::unique_ptr<std::any>();
         empty_entity_ids.push_back(entity);
+    }
+}
+
+void Scene::addBundle(Entity entity, Bundle& bundle) {
+    for (auto& [type, component] : bundle.components) {
+        if (component_mapping.find(type) == component_mapping.end()) {
+            components.push_back(std::vector<std::unique_ptr<std::any>>(entity_vector_length));
+            component_mapping[type] = components.size() - 1;
+        }
+        components[component_mapping[type]][entity] = std::make_unique<std::any>(*component.get());
     }
 }
 

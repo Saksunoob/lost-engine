@@ -1,4 +1,5 @@
 #include "square.hpp"
+#include "bundle.hpp"
 
 using namespace engine;
 
@@ -26,19 +27,17 @@ int main() {
         0, 1, 2, 0, 3, 1
     });
 
-    
+    Bundle test{vertices, indices};
 
     Entity ui1 = main_scene.createEntity();
     UITransform& parent = ui1.addComponent(UITransform(UNIT_PERCENT, Vector2(0, 0), UNIT_PERCENT, Vector2(50, 50), 0));
-    ui1.addComponent(vertices);
-    ui1.addComponent(indices);
+    ui1.addBundle(test);
     ui1.addComponent(Color(1, 0, 0));
 
     Entity ui2 = main_scene.createEntity();
     UITransform& child = ui2.addComponent(UITransform(UNIT_PERCENT, Vector2(25, 25), UNIT_PERCENT, Vector2(50, 50), 0));
     parent.addChild(child);
-    ui2.addComponent(vertices);
-    ui2.addComponent(indices);
+    ui2.addBundle(test);
     ui2.addComponent(Color(0, 0, 1));
 
     Engine::run();

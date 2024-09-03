@@ -10,6 +10,7 @@
 
 #include "stage.hpp"
 #include "component.hpp"
+#include "bundle.hpp"
 
 namespace engine {
 
@@ -21,6 +22,7 @@ namespace engine {
 
         template <typename C>
         C& addComponent(C component);
+        void addBundle(Bundle& bundle);
 
         operator unsigned() const{
             return id;
@@ -77,6 +79,8 @@ namespace engine {
                 components[component_mapping[type]][entity] = std::make_unique<std::any>(std::move(component));
                 return *std::any_cast<C>(components[component_mapping[type]][entity].get());
             }
+
+            void addBundle(Entity entity, Bundle& bundle);
 
             Components GetComponents();
 
