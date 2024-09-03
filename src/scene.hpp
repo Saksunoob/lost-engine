@@ -22,6 +22,8 @@ namespace engine {
 
         template <typename C>
         C& addComponent(C component);
+        template <typename C>
+        C* getComponent();
         void addBundle(Bundle& bundle);
 
         operator unsigned() const{
@@ -43,16 +45,6 @@ namespace engine {
         protected:
         unsigned entity_vector_length = 0;
         std::vector<std::vector<std::unique_ptr<std::any>>> components = std::vector<std::vector<std::unique_ptr<std::any>>>();
-
-            template<typename C>
-            Component<C> GetComponent() {
-                auto it = component_mapping.find(std::type_index(typeid(C)));
-                if (it == component_mapping.end()) {
-                    return Component<C>();
-                }
-                unsigned index = it->second;
-                return Component<C>(components[index]);
-            }
 
         public:
             Scene(std::string name) : name(name) {}
@@ -81,6 +73,16 @@ namespace engine {
             }
 
             void addBundle(Entity entity, Bundle& bundle);
+            
+            template<typename C>
+            Component<C> GetComponent() {
+                auto it = component_mapping.find(std::type_index(typeid(C)));
+                if (it == component_mapping.end()) {
+                    return Component<C>();
+                }
+                unsigned index = it->second;
+                return Component<C>(components[index]);
+            }
 
             Components GetComponents();
 
@@ -99,6 +101,11 @@ namespace engine {
 
     template <typename C>
     C& Entity::addComponent(C component) {
-        return scene.addComponent(*this, component);
+        return scene.addComponent(*this, std::move(component));
+    }
+
+    template <typename C>
+    C* Entity::getComponent() {
+        return scene.GetComponent<C>().getUnfiltered(id);
     }
 }

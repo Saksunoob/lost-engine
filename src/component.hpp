@@ -20,13 +20,17 @@ namespace engine {
             }
 
             C* operator[](unsigned index) {
-                if (!components) {
-                    return nullptr;
-                }
                 if (index >= filter.size()) {
                     return nullptr;
                 }
                 index = filter[index];
+                return getUnfiltered(index);
+            }
+
+            C* getUnfiltered(unsigned index) {
+                if (!components) {
+                    return nullptr;
+                }
                 if (index >= components->size() || components->at(index) == nullptr) {
                     return nullptr;
                 }
