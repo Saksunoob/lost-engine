@@ -150,15 +150,20 @@ Scene& Engine::addScene(std::string name, bool with_defaults) {
         scene.addStageAfter("update", "init_frame");
         scene.addStageAfter("render", "update");
 
-        scene.getStage("init_frame")->addSystem(timeSystem);
-        scene.getStage("init_frame")->addSystem(pollSDLEvents);
+        Stage& init_stage = *scene.getStage("init_frame");
+        for (Stage::System system : DEFAULT_INIT_SYSTEMS) {
+            init_stage.addSystem(system);
+        }
 
-        scene.getStage("update")->addSystem(updateUITransforms);
+        Stage& update_stage = *scene.getStage("update");
+        for (Stage::System system : DEFAULT_UPDATE_SYSTEMS) {
+            update_stage.addSystem(system);
+        }
 
-        scene.getStage("render")->addSystem(engine::renderColorMeshes);
-        scene.getStage("render")->addSystem(engine::renderUVMeshes);
-        scene.getStage("render")->addSystem(engine::renderTileMaps);
-        scene.getStage("render")->addSystem(engine::renderColorUI);
+        Stage& render_stage = *scene.getStage("render");
+        for (Stage::System system : DEFAULT_RENDER_SYSTEMS) {
+            render_stage.addSystem(system);
+        }
 
         scene.addResource(Time{});
         scene.addResource(Input{});

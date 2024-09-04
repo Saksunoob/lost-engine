@@ -9,11 +9,9 @@ namespace engine {
     class Scene;
 
     class Stage {
-        typedef void (*System)(Scene&);
-
-        std::vector<System> systems;
-        
         public:
+            typedef void (*System)(Scene&);
+
             std::string name;
 
             Stage(std::string name) : name(name), systems(std::vector<System>()){};
@@ -48,5 +46,8 @@ namespace engine {
             void addSystem(System system);
             void removeSystem(System system);
             void execute(Scene&);
+
+        private:
+            std::vector<System> systems;
     };
 }
