@@ -171,6 +171,71 @@ void engine::renderTileMaps(Scene& scene) {
     }
 }
 
+void engine::renderIndexedTextures(Scene& scene) {
+    const int ARRAY_SIZE = 10000;
+
+    struct Data {
+        glm::mat4 matrix[10000];
+        unsigned indices[10000];
+        glm::ivec2 atlas_size;
+    };
+
+    static Shader shader("shaders/IndexedTexture", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+    Components validCameras = scene.GetComponents().With<Camera, GlobalTransform>();
+    Component<Camera> cameras = validCameras.Get<Camera>();
+    unsigned main_camera;
+    for (int i = 0; i < cameras.size(); i++) {
+        if (cameras[i]->main) {
+            main_camera = i;
+            break;    
+        }
+        if (i+1 == cameras.size()) {
+            Logger::logWarning("No main camera");
+            return;
+        }
+    }
+    Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, TextureAtlas, TextureIndex>();
+
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
+
+    std::unordered_map<std::tuple<int, int, int, TextureData*>, std::vector<EntityComponents>, tuple_hash<int, int, int, TextureData*>> meshes;
+
+    for (unsigned i = 0; i < uvMeshes.size(); i++) {
+        int vertex_id = uvMeshes[i].Get<Vertices>()->id;
+        int index_id = uvMeshes[i].Get<Indices>()->id;
+        int uv_id = uvMeshes[i].Get<UVs>()->id;
+        meshes[{vertex_id, index_id, uv_id, &uvMeshes[i].Get<TextureAtlas>()->texture.getData()}].push_back(uvMeshes[i]);
+    }
+
+    shader.bind();
+    for (auto& [key, components] : meshes) {
+        int arrays = (components.size()-1)/ARRAY_SIZE+1;
+        TextureData& textureData = *std::get<TextureData*>(key);
+        std::vector<engine::Buffer *> vertex_buffers = {components[0].Get<Vertices>()->getBuffer(), components[0].Get<UVs>()->getBuffer()};
+        IVector2 atlas_size = components[0].Get<TextureAtlas>()->size;
+
+        for (int a = 0; a < arrays; a++) {
+            shader.bindVertexBuffers(vertex_buffers);
+            components[0].Get<Indices>()->getBuffer()->bind();
+
+            Data data;
+            data.atlas_size = glm::ivec2(atlas_size.x, atlas_size.y);
+            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
+                data.matrix[i] = proj * components[a*ARRAY_SIZE+i].Get<GlobalTransform>()->getTransformationMatrix(components[a*ARRAY_SIZE+i].Get<ZLayer>()->getZ());
+                data.indices[i] = components[a*ARRAY_SIZE+i].Get<TextureIndex>()->index;
+                Logger::log(std::format("updating with index: {}", components[a*ARRAY_SIZE+i].Get<TextureIndex>()->index));
+            }
+            shader.writeUniformBinding(0, 0, &data);
+            shader.writeSamplerBinding(0, 1, textureData);
+            shader.bindSet(0);
+            
+            vkCmdDrawIndexed(cmdBuffer, components[0].Get<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
+        }
+    }
+}
+
 void engine::updateUITransforms(Scene& scene) {
     IVector2 window_size = Engine::getWindowSize();
 

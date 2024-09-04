@@ -236,6 +236,10 @@ namespace engine {
         Texture texture;
     };
 
+    struct TextureIndex {
+        unsigned index;
+    };
+
     enum UnitType {
         UNIT_PERCENT,
         UNIT_PIXELS,

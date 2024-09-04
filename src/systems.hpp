@@ -11,6 +11,7 @@ namespace engine {
     void renderColorMeshes(Scene& scene);
     void renderUVMeshes(Scene& scene);
     void renderTileMaps(Scene& scene);
+    void renderIndexedTextures(Scene& scene);
     void updateUITransforms(Scene& scene);
     void renderColorUI(Scene& scene);
     void renderTextureUI(Scene& scene);
@@ -30,6 +31,7 @@ namespace engine {
         renderColorMeshes,
         renderUVMeshes,
         renderTileMaps,
+        renderIndexedTextures,
         renderColorUI,
         renderTextureUI
     };
