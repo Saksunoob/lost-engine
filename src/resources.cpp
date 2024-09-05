@@ -2,7 +2,9 @@
 
 void engine::Input::handleKeyEvent(SDL_Event& event) {
     if (event.type == SDL_KEYDOWN) {
-        keys[event.key.keysym.sym] = {true, true};
+        if (!keys[event.key.keysym.sym].pressed) {
+            keys[event.key.keysym.sym] = {true, true};
+        }
         return;
     }
     if (event.type == SDL_KEYUP) {
