@@ -188,9 +188,9 @@ namespace engine {
         TextureData(const TextureData &) = delete;
         TextureData(TextureData &&);
 
-        VkSampler getSampler() { return sampler; }
         VkImageView getImageView() { return imageView; }
         VkImageLayout getImageLayout() { return imageLayout; }
+        int getMipLevels() { return mipLevels; }
 
         void update(const void* data);
     private:
@@ -204,22 +204,36 @@ namespace engine {
         VkImage image;
         VkDeviceMemory imageMemory;
         VkImageView imageView;
-        VkSampler sampler;
         VkFormat imageFormat;
         VkImageLayout imageLayout;
     };
 
     struct Texture {
     public:
-        Texture(const std::string &filepath);
-        Texture(const void* data, IVector2 size, TextureFormat format);
+        enum Filter {
+            LINEAR = VK_FILTER_LINEAR,
+            NEAREST = VK_FILTER_NEAREST
+        };
+        enum AddressMode {
+            REPEAT = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            REPEAT_MIRRORED = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+            CLAMP_TO_EDGE = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            CLAMP_TO_BORDER = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
+        };
+
+        Texture(const std::string &filepath, Filter filter = Filter::LINEAR, AddressMode address_mode = AddressMode::REPEAT, bool mipmaps = true, Filter mipmap_filter = Filter::LINEAR);
+        Texture(const void* data, IVector2 size, TextureFormat format, Filter filter = Filter::LINEAR, AddressMode address_mode = AddressMode::REPEAT, bool mipmaps = true, Filter mipmap_filter = Filter::LINEAR);
+
+        ~Texture();
 
         TextureData& getData() { return *data.get(); }
+        VkSampler getSampler() { return *sampler.get(); }
     private:
-        void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
-        void generateMipmaps();
+        void createSampler(Filter filter, AddressMode address_mode, bool mipmaps, Filter mimap_filter);
 
+        std::shared_ptr<VkSampler> sampler;
         std::shared_ptr<TextureData> data;
+        static std::unordered_map<std::string, std::shared_ptr<TextureData>> texture_files;
     };
 
     struct TileMap {

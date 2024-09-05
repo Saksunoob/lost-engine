@@ -105,24 +105,6 @@ TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) 
     generateMipmaps();
     imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = static_cast<float>(mipLevels);
-    samplerInfo.maxAnisotropy = 4.0;
-    samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-    vkCreateSampler(device.device(), &samplerInfo, nullptr, &sampler);
-
     VkImageViewCreateInfo imageViewInfo {};
     imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -139,11 +121,10 @@ TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) 
 }
 
 TextureData::TextureData(TextureData &&other) : size(other.size), mipLevels(other.mipLevels),
-    image(other.image), imageMemory(other.imageMemory), imageView(other.imageView), sampler(other.sampler), imageFormat(other.imageFormat), imageLayout(other.imageLayout) {
+    image(other.image), imageMemory(other.imageMemory), imageView(other.imageView), imageFormat(other.imageFormat), imageLayout(other.imageLayout) {
     other.image = nullptr;
     other.imageMemory = nullptr;
     other.imageView = nullptr;
-    other.sampler = nullptr;
 }
 
 TextureData::~TextureData() {
@@ -156,9 +137,6 @@ TextureData::~TextureData() {
     }
     if (imageView) {
         vkDestroyImageView(device.device(), imageView, nullptr);
-    }
-    if (sampler) {
-        vkDestroySampler(device.device(), sampler, nullptr);
     }
 }
 
@@ -224,18 +202,63 @@ void TextureData::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout n
     device.endSingleTimeCommands(commandBuffer);
 }
 
-Texture::Texture(const std::string &filepath) {
-    int channels;
-    int m_BytesPerPixel;
-    IVector2 size;
-    auto img_data = stbi_load(filepath.c_str(), &size.x, &size.y, &m_BytesPerPixel, 4);
-    data = std::shared_ptr<TextureData>(new TextureData(img_data, size, TextureFormat::Srgb(4)));
+std::unordered_map<std::string, std::shared_ptr<TextureData>> Texture::texture_files = {};
 
-    stbi_image_free(img_data);
+Texture::Texture(const std::string &filepath, Filter filter, AddressMode address_mode, bool mipmaps, Filter mipmap_filter) {
+    if (texture_files.find(filepath) == texture_files.end()) {
+        int channels;
+        int m_BytesPerPixel;
+        IVector2 size;
+        auto img_data = stbi_load(filepath.c_str(), &size.x, &size.y, &m_BytesPerPixel, 4);
+        texture_files[filepath] = std::shared_ptr<TextureData>(new TextureData(img_data, size, TextureFormat::Srgb(4)));
+
+        stbi_image_free(img_data);
+    }
+    
+    data = texture_files[filepath];
+    createSampler (filter, address_mode, mipmaps, mipmap_filter);
 }
 
-Texture::Texture(const void* img_data, IVector2 size, TextureFormat format) {
+Texture::Texture(const void* img_data, IVector2 size, TextureFormat format, Filter filter, AddressMode address_mode, bool mipmaps, Filter mipmap_filter) {
     data = std::shared_ptr<TextureData>(new TextureData(img_data, size, format));
+    createSampler (filter, address_mode, mipmaps, mipmap_filter);
+}
+
+void Texture::createSampler(Filter filter, AddressMode address_mode, bool mipmaps, Filter mipmap_filter) {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+    samplerInfo.magFilter = (VkFilter)filter;
+    samplerInfo.minFilter = (VkFilter)filter;
+    switch (mipmap_filter) {
+        case Filter::LINEAR:
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        case Filter::NEAREST:
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+    }
+    samplerInfo.addressModeU = (VkSamplerAddressMode)address_mode;
+    samplerInfo.addressModeV = (VkSamplerAddressMode)address_mode;
+    samplerInfo.addressModeW = (VkSamplerAddressMode)address_mode;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = mipmaps ? static_cast<float>(data->getMipLevels()) : 0.0f;
+    samplerInfo.maxAnisotropy = 4.0;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    VkSampler new_sampler;
+    vkCreateSampler(Engine::getDevice().device(), &samplerInfo, nullptr, &new_sampler);
+
+    sampler = std::make_shared<VkSampler>(new_sampler);
+}
+
+Texture::~Texture() {
+    if (sampler.unique()) {
+        vkDestroySampler(Engine::getDevice().device(), *sampler.get(), nullptr);
+    }
 }
 
 void TextureData::generateMipmaps() {
