@@ -39,6 +39,25 @@ namespace engine {
 
         IVector2() : x(0), y(0) {};
         IVector2(int x, int y): x(x), y(y) {};
+
+        bool operator==(IVector2 other) {
+            return x==other.x && y==other.y;
+        }
+        IVector2 operator+(IVector2 other) {
+            return IVector2(x+other.x,y+other.y);
+        }
+        IVector2 operator-(IVector2 other) {
+            return IVector2(x-other.x,y-other.y);
+        }
+        IVector2 operator-() {
+            return IVector2(-x,-y);
+        }
+        IVector2 operator*(IVector2 other) {
+            return IVector2(x*other.x,y*other.y);
+        }
+        IVector2 operator/(IVector2 other) {
+            return IVector2(x/other.x,y/other.y);
+        }
     };
 
     struct Color {

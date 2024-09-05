@@ -371,18 +371,14 @@ void engine::timeSystem(Scene& scene) {
 }
 
 void engine::pollSDLEvents(Scene& scene) {
-    scene.getResource<Input>().newFrame();
+    Input& input = scene.getResource<Input>();
+    input.newFrame();
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        input.handleKeyEvent(event);
         switch (event.type) {
             case (SDL_QUIT):
                 Engine::quit();
-                break;
-            case (SDL_WINDOWEVENT): {
-                break;
-            }
-            case (SDL_KEYDOWN): case (SDL_KEYUP):
-                scene.getResource<Input>().handleKeyEvent(event);
                 break;
         }
     }

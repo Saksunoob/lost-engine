@@ -3,6 +3,8 @@
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_events.h>
 
+#include "utils.hpp"
+
 namespace engine {
     class Time {
 
@@ -28,6 +30,8 @@ namespace engine {
 
     class Input {
         std::unordered_map<int, KeyState> keys;
+        std::unordered_map<uint8_t, KeyState> buttons;
+        IVector2 mouse_pos, mouse_delta, scroll;
         public:
         void handleKeyEvent(SDL_Event& event);
         void newFrame();
@@ -35,5 +39,14 @@ namespace engine {
         bool getKey(SDL_KeyCode) const;
         bool getKeyJustPressed(SDL_KeyCode) const;
         bool getKeyJustReleased(SDL_KeyCode) const;
+
+        bool getMouseButton(uint8_t button) const;
+        bool getMouseButtonJustPressed(uint8_t button) const;
+        bool getMouseButtonJustReleased(uint8_t button) const;
+
+        IVector2 getMousePos() const;
+        IVector2 getMouseDelta() const;
+
+        IVector2 getMouseScroll() const;
     };
 }

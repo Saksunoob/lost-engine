@@ -3,9 +3,25 @@
 
 using namespace engine;
 
+void test(Scene& scene) {
+    Input& input = scene.getResource<Input>();
+    if (input.getMouseButtonJustPressed(1)) {
+        Logger::log("mouse 1");
+    }
+    if (input.getMouseScroll() != IVector2(0, 0)) {
+        Logger::log(std::format("scroll: {{x: {}, y: {}}}", input.getMouseScroll().x, input.getMouseScroll().y));
+    }
+    if (input.getMouseDelta() != IVector2(0, 0)) {
+        Logger::log(std::format("motion: {{x: {}, y: {}}}", input.getMouseDelta().x, input.getMouseDelta().y));
+        Logger::log(std::format("mouse: {{x: {}, y: {}}}", input.getMousePos().x, input.getMousePos().y));
+    }
+}
+
 int main() {
     Engine::init("Square", IVector2(800, 600));
     Scene& main_scene = Engine::addScene("main", true);
+
+    main_scene.getStage("update")->addSystem(test);
 
     Entity camera = main_scene.createEntity();
     camera.addComponent(Camera(true));
