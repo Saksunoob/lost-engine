@@ -4,6 +4,8 @@
 
 using namespace engine;
 
+Vector2::Vector2(IVector2 vec) : x(vec.x), y(vec.y) {};
+
 std::vector<u_char> PerlinNoise::generate_char(int n, float freq, float seed) {
     FastNoiseLite noise{};
     noise.SetSeed(seed);

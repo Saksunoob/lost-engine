@@ -228,11 +228,13 @@ namespace engine {
 
         TextureData& getData() { return *data.get(); }
         VkSampler getSampler() { return *sampler.get(); }
+        IVector2 getSize() { return size; }
     private:
         void createSampler(Filter filter, AddressMode address_mode, bool mipmaps, Filter mimap_filter);
 
         std::shared_ptr<VkSampler> sampler;
         std::shared_ptr<TextureData> data;
+        IVector2 size;
         static std::unordered_map<std::string, std::shared_ptr<TextureData>> texture_files;
     };
 
@@ -298,5 +300,10 @@ namespace engine {
 
         private:
             Transform absolute;
+    };
+
+    struct SlicedTexture {
+        std::array<float,4> borders;
+        Vector2 pixel_size;
     };
 }

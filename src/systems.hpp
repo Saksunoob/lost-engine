@@ -15,6 +15,7 @@ namespace engine {
     void updateUITransforms(Scene& scene);
     void renderColorUI(Scene& scene);
     void renderTextureUI(Scene& scene);
+    void renderSlicedTextures(Scene& scene);
     void timeSystem(Scene& scene);
     void pollSDLEvents(Scene& scene);
 
@@ -33,6 +34,7 @@ namespace engine {
         renderTileMaps,
         renderIndexedTextures,
         renderColorUI,
-        renderTextureUI
+        renderTextureUI,
+        renderSlicedTextures
     };
 }

@@ -208,7 +208,6 @@ Texture::Texture(const std::string &filepath, Filter filter, AddressMode address
     if (texture_files.find(filepath) == texture_files.end()) {
         int channels;
         int m_BytesPerPixel;
-        IVector2 size;
         auto img_data = stbi_load(filepath.c_str(), &size.x, &size.y, &m_BytesPerPixel, 4);
         texture_files[filepath] = std::shared_ptr<TextureData>(new TextureData(img_data, size, TextureFormat::Srgb(4)));
 
@@ -219,7 +218,7 @@ Texture::Texture(const std::string &filepath, Filter filter, AddressMode address
     createSampler (filter, address_mode, mipmaps, mipmap_filter);
 }
 
-Texture::Texture(const void* img_data, IVector2 size, TextureFormat format, Filter filter, AddressMode address_mode, bool mipmaps, Filter mipmap_filter) {
+Texture::Texture(const void* img_data, IVector2 size, TextureFormat format, Filter filter, AddressMode address_mode, bool mipmaps, Filter mipmap_filter) : size(size) {
     data = std::shared_ptr<TextureData>(new TextureData(img_data, size, format));
     createSampler (filter, address_mode, mipmaps, mipmap_filter);
 }

@@ -5,15 +5,9 @@ using namespace engine;
 
 void test(Scene& scene) {
     Input& input = scene.getResource<Input>();
-    if (input.getMouseButtonJustPressed(1)) {
-        Logger::log("mouse 1");
-    }
+    Components sliced = scene.GetComponents().With<SlicedTexture>();
     if (input.getMouseScroll() != IVector2(0, 0)) {
-        Logger::log(std::format("scroll: {{x: {}, y: {}}}", input.getMouseScroll().x, input.getMouseScroll().y));
-    }
-    if (input.getMouseDelta() != IVector2(0, 0)) {
-        Logger::log(std::format("motion: {{x: {}, y: {}}}", input.getMouseDelta().x, input.getMouseDelta().y));
-        Logger::log(std::format("mouse: {{x: {}, y: {}}}", input.getMousePos().x, input.getMousePos().y));
+        sliced[0].Get<SlicedTexture>()->pixel_size = sliced[0].Get<SlicedTexture>()->pixel_size + Vector2(input.getMouseScroll().y, input.getMouseScroll().y)/10.;
     }
 }
 
@@ -28,18 +22,11 @@ int main() {
     camera.addComponent(GlobalTransform(Vector2(0, 0), Vector2(1, 1), 0));
 
     Entity texture = main_scene.createEntity();
-    texture.addComponent(GlobalTransform({-50, 0}, {100, 100}, 0));
+    texture.addComponent(UITransform(Point::center(), Point::center(), UNIT_PIXELS, {0, 0}, UNIT_PERCENT, {90, 90}, 0));
     texture.addComponent(ZLayer(0, 0.1));
     texture.addBundle(Bundles::quadMeshBundle());
-    texture.addComponent(TextureAtlas({2, 2},Texture("../src/textures/test.png", Texture::Filter::NEAREST)));
-    texture.addComponent(TextureIndex(0));
-
-    Entity texture2 = main_scene.createEntity();
-    texture2.addComponent(GlobalTransform({50, 0}, {100, 100}, 0));
-    texture2.addComponent(ZLayer(0, 0.1));
-    texture2.addBundle(Bundles::quadMeshBundle());
-    texture2.addComponent(TextureAtlas({2, 2},Texture("../src/textures/test.png", Texture::Filter::LINEAR)));
-    texture2.addComponent(TextureIndex(1));
+    texture.addComponent(Texture("../src/textures/test.png", Texture::Filter::NEAREST, Texture::AddressMode::CLAMP_TO_EDGE));
+    texture.addComponent(SlicedTexture({{64, 64, 64, 64}}, IVector2(1, 1)));
 
     Engine::run();
 }

@@ -320,7 +320,7 @@ void engine::renderTextureUI(Scene& scene) {
 
     static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)*ARRAY_SIZE), Binding::Sampler()});
 
-    Components uvMeshes = scene.GetComponents().With<UITransform, Vertices, Indices, UVs, Texture>();
+    Components uvMeshes = scene.GetComponents().With<UITransform, Vertices, Indices, UVs, Texture>().Without<SlicedTexture>();
 
     glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
 
@@ -364,10 +364,46 @@ void engine::renderTextureUI(Scene& scene) {
     }
 }
 
+void engine::renderSlicedTextures(Scene& scene) {
+    struct Data {
+        glm::mat4 matrix;
+        glm::mat4 proj;
+        Vector2 slice_scale;
+        Vector2 teture_size;
+        std::array<float, 4> borders;
+    };
+
+    static Shader shader("shaders/9SliceTexture", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
+
+    glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
+
+    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
+
+    Components textures = scene.GetComponents().With<UITransform, ZLayer, Vertices, Indices, UVs, Texture, SlicedTexture>();
+    shader.bind();
+    for (int i = 0; i < textures.size(); i++) {
+        shader.bindVertexBuffers({textures[i].Get<Vertices>()->getBuffer(), textures[i].Get<UVs>()->getBuffer()});
+        textures[i].Get<Indices>()->getBuffer()->bind();
+
+        Data data {
+            textures[i].Get<UITransform>()->getAbsoute().getTransformationMatrix(textures[i].Get<ZLayer>()->getZ()),
+            proj,
+            textures[i].Get<SlicedTexture>()->pixel_size,
+            textures[i].Get<Texture>()->getSize(),
+            textures[i].Get<SlicedTexture>()->borders
+        };
+
+        shader.writeUniformBinding(0, 0, &data);
+        shader.writeSamplerBinding(0, 1, *textures[i].Get<Texture>());
+        shader.bindSet(0);
+        vkCmdDrawIndexed(cmdBuffer, textures[i].Get<Indices>()->item_count, 1, 0, 0, 0);
+    }
+}
+
 void engine::timeSystem(Scene& scene) {
     Time& time = scene.getResource<Time>();
     time.newFrame();
-    Logger::log("FPS: " + std::to_string(1/time.deltaTime()));
+    //Logger::log("FPS: " + std::to_string(1/time.deltaTime()));
 }
 
 void engine::pollSDLEvents(Scene& scene) {

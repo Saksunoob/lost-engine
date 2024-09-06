@@ -1,9 +1,13 @@
 #pragma once
 
 namespace engine {
+    struct IVector2;
+
     struct Vector2 {
         float x,y;
 
+        Vector2() : x(0), y(0) {};
+        Vector2(IVector2 vec);
         Vector2(float x, float y) : x(x), y(y) {};
 
         Vector2 operator+(Vector2 other) {
