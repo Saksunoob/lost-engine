@@ -120,36 +120,38 @@ namespace engine {
         static int max_layer;
     };
 
-    template <typename B>
+    template <typename B, typename T>
     struct RenderData {
         const int id;
         const int item_count;
 
-        template<typename T>
         RenderData(std::vector<T> buffer_data) : id(id_counter++), item_count(buffer_data.size()) {
+            data = std::make_shared<std::vector<T>>(buffer_data);
             buffer = std::make_shared<B>(sizeof(T), true);
             buffer->setVector(buffer_data.data(), buffer_data.size());
         }
 
         B* getBuffer() {return buffer.get();}
+        const std::vector<T>& getData() { return *data.get(); }
 
         private:
             static int id_counter;
+            std::shared_ptr<std::vector<T>> data;
             std::shared_ptr<B> buffer = nullptr;
     };
 
-    template<typename B>
-    int RenderData<B>::id_counter = 0;
+    template<typename B, typename T>
+    int RenderData<B, T>::id_counter = 0;
 
-    struct Vertices : public RenderData<VertexBuffer> {
+    struct Vertices : public RenderData<VertexBuffer, Vector2> {
         Vertices(std::vector<Vector2> vertices) : RenderData(vertices) {};
     };
 
-    struct Indices : public RenderData<IndexBuffer> {
+    struct Indices : public RenderData<IndexBuffer, unsigned> {
         Indices(std::vector<unsigned> indices) : RenderData(indices) {};
     };
 
-    struct UVs : public RenderData<VertexBuffer> {
+    struct UVs : public RenderData<VertexBuffer, Vector2> {
         UVs(std::vector<Vector2> uvs) : RenderData(uvs) {};
     };
 
@@ -305,5 +307,28 @@ namespace engine {
     struct SlicedTexture {
         std::array<float,4> borders;
         Vector2 pixel_size;
+    };
+
+    enum ColliderType {
+        SQUARE,
+        CIRCLE,
+        MESH
+    };
+
+    struct UICollider {
+        ColliderType type;
+        union Data {
+            AABB square;
+            float radius;
+        } data;
+
+        static UICollider square(AABB square) {
+            return {SQUARE, Data{square: square}};
+        };
+        static UICollider circle(float radius) {
+            return {CIRCLE, Data{radius: radius}};
+        }
+
+        bool collidesWithPoint(Vector2 point, UITransform& transform, Vertices* = nullptr, Indices* = nullptr);
     };
 }

@@ -410,3 +410,60 @@ void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
 Transform UITransform::getAbsoute() {
     return absolute;
 }
+
+float area(const Vector2& A, const Vector2& B, const Vector2& C) {
+    return 0.5 * std::abs(A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));
+}
+
+// Function to check if two floating-point numbers are approximately equal
+bool approximatelyEqual(float a, float b) {
+    return std::abs(a - b) < FLT_EPSILON;
+}
+
+// Function to check if the point P is inside the triangle formed by points A, B, and C
+bool isPointInTriangle(const Vector2& A, const Vector2& B, const Vector2& C, const Vector2& P) {
+    float totalArea = area(A, B, C);
+    float areaPAB = area(P, A, B);
+    float areaPBC = area(P, B, C);
+    float areaPCA = area(P, C, A);
+
+    // Check if the sum of the areas of the sub-triangles is approximately equal to the area of the whole triangle
+    return approximatelyEqual(totalArea, areaPAB + areaPBC + areaPCA);
+}
+
+bool UICollider::collidesWithPoint(Vector2 point, UITransform& transform, Vertices* vertices, Indices* indices) {
+    switch (type) {
+        case ColliderType::CIRCLE:
+            return transform.getAbsoute().position.distance(point) >= data.radius;
+        case ColliderType::SQUARE: {
+            Transform abs_transform = transform.getAbsoute();
+            Vector2 rel_point = (point - abs_transform.position).rotate(-abs_transform.rotation) / abs_transform.scale;
+            return data.square.collidesWithPoint(rel_point);
+        }
+        case ColliderType::MESH: {
+            Transform abs_transform = transform.getAbsoute();
+            Vector2 rel_point = (point - abs_transform.position).rotate(-abs_transform.rotation) / abs_transform.scale;
+            if (!vertices) {
+                Logger::logWarning("No mesh provided for Mesh collider");
+                return false;
+            }
+            const std::vector<Vector2>& vert_vec = vertices->getData();
+            if (indices) {
+                const std::vector<unsigned>& idx_vec = indices->getData();
+                for (int i = 0; i < idx_vec.size()/3; i++) {
+                    if (isPointInTriangle(vert_vec[idx_vec[i]], vert_vec[idx_vec[i+1]], vert_vec[idx_vec[i+2]], rel_point)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            for (int i = 0; i < vert_vec.size()/3; i++) {
+                if (isPointInTriangle(vert_vec[i], vert_vec[i+1], vert_vec[i+2], rel_point)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    return false;
+}

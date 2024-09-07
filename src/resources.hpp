@@ -45,6 +45,7 @@ namespace engine {
         bool getMouseButtonJustReleased(uint8_t button) const;
 
         IVector2 getMousePos() const;
+        IVector2 getUIMousePos() const;
         IVector2 getMouseDelta() const;
 
         IVector2 getMouseScroll() const;

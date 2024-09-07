@@ -1,4 +1,5 @@
 #include "resources.hpp"
+#include "engine.hpp"
 
 void engine::Input::handleKeyEvent(SDL_Event& event) {
     switch (event.type) {
@@ -78,6 +79,9 @@ bool engine::Input::getMouseButtonJustReleased(uint8_t button) const {
 
 engine::IVector2 engine::Input::getMousePos() const {
     return mouse_pos;
+}
+engine::IVector2 engine::Input::getUIMousePos() const {
+    return mouse_pos - Engine::getWindowSize()/2;
 }
 engine::IVector2 engine::Input::getMouseDelta() const {
     return mouse_delta;
