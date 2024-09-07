@@ -63,7 +63,8 @@ float ZLayer::getZ() {
     return rel_layer*layer_width+order*layer_width;
 }
 
-glm::mat4 Camera::getProjectionMatrix(const Transform* transform, IVector2 window_size) {
+glm::mat4 Camera::getProjectionMatrix(const Transform* transform) {
+    IVector2 window_size = Engine::getWindowSize();
     glm::mat4 matrix(1.0);
     if (transform) {
         transform->getTransformationMatrix();
@@ -71,6 +72,17 @@ glm::mat4 Camera::getProjectionMatrix(const Transform* transform, IVector2 windo
     matrix = glm::scale(matrix, glm::vec3(window_size.x/2.0, window_size.y/2.0, 1.0));
 
     return glm::inverse(matrix);
+}
+
+Vector2 Camera::screenToWorldPos(const Transform* transform, IVector2 screen_pos) {
+    Vector2 pos = screen_pos - Engine::getWindowSize()/2;
+    glm::vec4 projected_pos = glm::vec4(pos.x, pos.y, 0.0, 1.0) * getProjectionMatrix(transform);
+    return Vector2(projected_pos.x, projected_pos.y);
+}
+IVector2 Camera::worldToScreenPos(const Transform* transform, Vector2 world_pos) {
+    glm::vec4 projected_pos = glm::vec4(world_pos.x, world_pos.y, 0.0, 1.0) * glm::inverse(getProjectionMatrix(transform));
+    IVector2 pos(projected_pos.x, projected_pos.y);
+    return pos + Engine::getWindowSize()/2;
 }
 
 TextureData::TextureData(const void* data, IVector2 size, TextureFormat format) : size(size), format(format) {

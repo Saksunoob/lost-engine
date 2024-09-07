@@ -160,7 +160,9 @@ namespace engine {
 
         Camera(bool main) : main(main) {};
 
-        static glm::mat4 getProjectionMatrix(const Transform* transform, IVector2 window_size);
+        static glm::mat4 getProjectionMatrix(const Transform* transform);
+        Vector2 screenToWorldPos(const Transform* transform, IVector2 screen_pos);
+        IVector2 worldToScreenPos(const Transform* transform, Vector2 world_pos);
     };
 
     struct TextureFormat {

@@ -29,7 +29,7 @@ void engine::renderColorMeshes(Scene& scene) {
     }
     Components colorMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, Color>();
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera]);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -85,7 +85,7 @@ void engine::renderUVMeshes(Scene& scene) {
     }
     Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, Texture>();
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera]);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -146,7 +146,7 @@ void engine::renderTileMaps(Scene& scene) {
         }
     }
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera]);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -196,7 +196,7 @@ void engine::renderIndexedTextures(Scene& scene) {
     }
     Components uvMeshes = scene.GetComponents().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, TextureAtlas, TextureIndex>();
 
-    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera], Engine::getWindowSize());
+    glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera]);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -272,7 +272,7 @@ void engine::renderColorUI(Scene& scene) {
 
     Components colorMeshes = scene.GetComponents().With<UITransform, Vertices, Indices, Color>();
 
-    glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
+    glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -322,7 +322,7 @@ void engine::renderTextureUI(Scene& scene) {
 
     Components uvMeshes = scene.GetComponents().With<UITransform, Vertices, Indices, UVs, Texture>().Without<SlicedTexture>();
 
-    glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
+    glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
@@ -375,7 +375,7 @@ void engine::renderSlicedTextures(Scene& scene) {
 
     static Shader shader("shaders/9SliceTexture", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)), Binding::Sampler()});
 
-    glm::mat4 proj = Camera::getProjectionMatrix(nullptr, Engine::getWindowSize());
+    glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
 
