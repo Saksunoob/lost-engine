@@ -1,10 +1,24 @@
 #include <fastNoiseLite/fastNoiseLite.h>
 #include <vector>
 #include "utils.hpp"
+#include "components.hpp"
 
 using namespace engine;
 
 Vector2::Vector2(IVector2 vec) : x(vec.x), y(vec.y) {};
+
+Vector2 Vector2::operator*(Transform& transform) const {
+    glm::vec4 transformed = glm::vec4(x, y, 0.0, 1.0) * transform.getTransformationMatrix();
+    return {transformed.x, transformed.y};
+}
+
+Polygon Polygon::transformed(Transform& transform) {
+    Polygon transformed = *this;
+    for (Vector2& point : transformed.points) {
+        point = point * transform;
+    }
+    return transformed;
+}
 
 std::vector<u_char> PerlinNoise::generate_char(int n, float freq, float seed) {
     FastNoiseLite noise{};

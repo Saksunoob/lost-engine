@@ -317,20 +317,32 @@ namespace engine {
         MESH
     };
 
-    struct UICollider {
+    struct Collider {
         ColliderType type;
         union Data {
             AABB square;
             float radius;
         } data;
 
-        static UICollider square(AABB square) {
+        struct ColliderInfo {
+            Collider& collider;
+            Transform transform;
+            Vertices* vertices;
+            Indices* indices;
+
+            std::vector<Polygon> getPolygons();
+        };
+
+        static Collider square(AABB square) {
             return {SQUARE, Data{square: square}};
         };
-        static UICollider circle(float radius) {
+        static Collider circle(float radius) {
             return {CIRCLE, Data{radius: radius}};
         }
 
-        bool collidesWithPoint(Vector2 point, UITransform& transform, Vertices* = nullptr, Indices* = nullptr);
+        bool collidesWithPoint(Vector2 point, Transform& transform, Vertices* = nullptr, Indices* = nullptr);
+        bool collidesWith(ColliderInfo other, Transform& transform, Vertices* = nullptr, Indices* = nullptr);
+
+        ColliderInfo getInfo(Entity entity);
     };
 }

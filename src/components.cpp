@@ -443,17 +443,17 @@ bool isPointInTriangle(const Vector2& A, const Vector2& B, const Vector2& C, con
     return approximatelyEqual(totalArea, areaPAB + areaPBC + areaPCA);
 }
 
-bool UICollider::collidesWithPoint(Vector2 point, UITransform& transform, Vertices* vertices, Indices* indices) {
+bool Collider::collidesWithPoint(Vector2 point, Transform& transform, Vertices* vertices, Indices* indices) {
     switch (type) {
         case ColliderType::CIRCLE:
-            return transform.getAbsoute().position.distance(point) >= data.radius;
+            return transform.position.distance(point) >= data.radius;
         case ColliderType::SQUARE: {
-            Transform abs_transform = transform.getAbsoute();
+            Transform abs_transform = transform;
             Vector2 rel_point = (point - abs_transform.position).rotate(-abs_transform.rotation) / abs_transform.scale;
             return data.square.collidesWithPoint(rel_point);
         }
         case ColliderType::MESH: {
-            Transform abs_transform = transform.getAbsoute();
+            Transform abs_transform = transform;
             Vector2 rel_point = (point - abs_transform.position).rotate(-abs_transform.rotation) / abs_transform.scale;
             if (!vertices) {
                 Logger::logWarning("No mesh provided for Mesh collider");
@@ -478,4 +478,103 @@ bool UICollider::collidesWithPoint(Vector2 point, UITransform& transform, Vertic
         }
     }
     return false;
+}
+
+std::vector<Vector2> getAxes(Polygon poly) {
+    std::vector<Vector2> axes(poly.points.size());
+    for (int i = 0; i < poly.points.size(); i++) {
+        Vector2 edge = poly.points[i] - poly.points[(i+1)%poly.points.size()];
+        Vector2 normal = edge.normal();
+        axes[i] = (normal / normal.magnitude());
+    }
+    return axes;
+}
+
+std::array<float, 2> project(Polygon poly, Vector2 axis) {
+    float dot = poly.points[0].dot(axis);
+    float min = dot;
+    float max = dot;
+    for (int i = 1; i < poly.points.size(); i++) {
+        float dot = poly.points[i].dot(axis);
+        min = std::min(min, dot);
+        max = std::max(max, dot);
+    }
+    return {min, max};
+}
+
+bool polygonsCollide(Polygon poly1, Polygon poly2) {
+    std::vector<Vector2> axes = getAxes(poly1);
+    std::vector<Vector2> axes2 = getAxes(poly2);
+    axes.insert(axes.end(), axes2.begin(), axes2.end());
+
+    for (Vector2 axis : axes) {
+        std::array<float, 2> proj1 = project(poly1, axis);
+        std::array<float, 2> proj2 = project(poly2, axis);
+
+        if (proj1[1] < proj2[0] || proj2[1] < proj1[0]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<Polygon> Collider::ColliderInfo::getPolygons() {
+    if (collider.type == ColliderType::SQUARE) {
+        return {{collider.data.square.getPolygon().transformed(transform)}};
+    }
+    if (collider.type == ColliderType::MESH) {
+        const std::vector<Vector2>& vert_vec = vertices->getData();
+        if (indices) {
+            std::vector<Polygon> polygons(indices->item_count/3);
+            const std::vector<unsigned>& idx_vec = indices->getData();
+            for (int i = 0; i < idx_vec.size()/3; i++) {
+                polygons[i] = Polygon{{vert_vec[idx_vec[i]], vert_vec[idx_vec[i+1]], vert_vec[idx_vec[i+2]]}}.transformed(transform);
+            }
+            return polygons;
+        }
+        std::vector<Polygon> polygons(vertices->item_count/3);
+        for (int i = 0; i < vert_vec.size()/3; i++) {
+            polygons[i] = Polygon{{vert_vec[i], vert_vec[i+1], vert_vec[i+2]}}.transformed(transform);
+        }
+        return polygons;
+    }
+    return {};
+}
+
+bool Collider::collidesWith(ColliderInfo other, Transform& transform, Vertices* vertices, Indices* indices) {
+    if (type != ColliderType::CIRCLE && other.collider.type != ColliderType::CIRCLE) {
+        std::vector<Polygon> polygons1 = ColliderInfo{*this, transform, vertices, indices}.getPolygons();
+        std::vector<Polygon> polygons2 = other.getPolygons();
+
+        for (Polygon& p1 : polygons1) {
+            for (Polygon& p2 : polygons2) {
+                if (polygonsCollide(p1, p2)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    if (type == ColliderType::CIRCLE && other.collider.type == ColliderType::CIRCLE) {
+        Vector2 p1 = transform.position;
+        Vector2 p2 = transform.position;
+        float r1 = transform.scale.magnitude()/sqrt(2) * data.radius;
+        float r2 = transform.scale.magnitude()/sqrt(2) * other.collider.data.radius;
+
+        return p1.distance(p2) <= r1+r2;
+    }
+    Logger::logWarning("Unimplemented collision");
+    return false;
+}
+
+Collider::ColliderInfo Collider::getInfo(Entity entity) {
+    Transform transform = entity.getComponent<GlobalTransform>() ? 
+        *entity.getComponent<GlobalTransform>() : 
+        transform = entity.getComponent<UITransform>()->getAbsoute();
+    return ColliderInfo {
+        collider: *this,
+        transform: transform,
+        vertices: entity.getComponent<Vertices>(),
+        indices: entity.getComponent<Indices>()
+    };
 }

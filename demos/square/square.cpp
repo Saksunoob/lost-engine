@@ -3,22 +3,9 @@
 
 using namespace engine;
 
-void test(Scene& scene) {
-    Input& input = scene.getResource<Input>();
-    Components collider = scene.GetComponents().With<UICollider>();
-    bool collides = collider[0].Get<UICollider>()->collidesWithPoint(input.getUIMousePos(), *collider[0].Get<UITransform>());
-    Logger::log(std::to_string(collides));
-
-    if (input.getMouseScroll().y != 0) {
-        collider[0].Get<UITransform>()->rotation += 0.1*input.getMouseScroll().y;
-    }
-}
-
 int main() {
     Engine::init("Square", IVector2(800, 600));
     Scene& main_scene = Engine::addScene("main", true);
-
-    main_scene.getStage("update")->addSystem(test);
 
     Entity camera = main_scene.createEntity();
     camera.addComponent(Camera(true));
@@ -30,7 +17,7 @@ int main() {
     texture.addBundle(Bundles::quadMeshBundle());
     texture.addComponent(Texture("../src/textures/test.png", Texture::Filter::NEAREST, Texture::AddressMode::CLAMP_TO_EDGE));
     texture.addComponent(SlicedTexture({{64, 64, 64, 64}}, IVector2(1, 1)));
-    texture.addComponent(UICollider::square(AABB({-0.5, -0.5}, {0.5, 0.5})));
+    texture.addComponent(Collider::square(AABB({-0.5, -0.5}, {0.5, 0.5})));
 
     Engine::run();
 }

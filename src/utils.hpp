@@ -4,6 +4,7 @@
 
 namespace engine {
     struct IVector2;
+    struct Transform;
 
     struct Vector2 {
         float x,y;
@@ -12,12 +13,20 @@ namespace engine {
         Vector2(IVector2 vec);
         Vector2(float x, float y) : x(x), y(y) {};
 
+        Vector2 normal() {
+            return Vector2(-y, x);
+        }
+
         float magnitude() const {
             return sqrt(x*x+y*y);
         }
 
         float distance(Vector2 other) const {
             return operator-(other).magnitude();
+        }
+
+        float dot(Vector2 other) {
+            return x*other.x+y*other.y;
         }
 
         Vector2 operator+(Vector2 other) const {
@@ -38,6 +47,7 @@ namespace engine {
         Vector2 operator*(float other) const {
             return Vector2(x*other,y*other);
         }
+        Vector2 operator*(Transform& transform) const;
         Vector2 operator/(float other) const {
             return Vector2(x/other,y/other);
         }
@@ -89,6 +99,12 @@ namespace engine {
         Color(float brightness) : r(brightness), g(brightness), b(brightness), a(1.0) {};
     };
 
+    struct Polygon {
+        std::vector<Vector2> points;
+
+        Polygon transformed(Transform& transform);
+    };
+
     struct AABB {
         Vector2 minp, maxp;
 
@@ -99,6 +115,10 @@ namespace engine {
 
         bool collidesWithPoint(Vector2 point) {
             return point.x >= minp.x && point.y >= minp.y && point.x <= maxp.x && point.y <= maxp.y;
+        }
+
+        Polygon getPolygon() {
+            return {{minp, {minp.x, maxp.y}, maxp, {maxp.x, minp.y}}};
         }
     };
 
