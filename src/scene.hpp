@@ -37,10 +37,10 @@ namespace engine {
         }
     };
 
-    class Components;
+    class Entites;
 
     class Scene {
-        friend Components;
+        friend Entites;
 
         std::string name;
         std::vector<Stage> stages = std::vector<Stage>();
@@ -93,16 +93,16 @@ namespace engine {
             void addBundle(Entity entity, Bundle& bundle);
             
             template<typename C>
-            Component<C> GetComponent() {
+            Components<C> GetComponent() {
                 auto it = component_mapping.find(std::type_index(typeid(C)));
                 if (it == component_mapping.end()) {
-                    return Component<C>();
+                    return Components<C>();
                 }
                 unsigned index = it->second;
-                return Component<C>(components[index]);
+                return Components<C>(components[index]);
             }
 
-            Components GetComponents();
+            Entites GetEntities();
 
             template<typename R>
             void addResource(R resource) {

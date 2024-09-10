@@ -6,15 +6,15 @@
 
 namespace engine {
     template <typename C>
-    class Component {
+    class Components {
         std::vector<std::unique_ptr<std::any>>* components;
         std::vector<unsigned> filter;
 
         public:
-            Component() : components(nullptr) {};
-            Component(std::vector<std::unique_ptr<std::any>>& components) : components(&components) {};
+            Components() : components(nullptr) {};
+            Components(std::vector<std::unique_ptr<std::any>>& components) : components(&components) {};
 
-            Component<C>& withFilter(const std::vector<unsigned>& new_filter) {
+            Components<C>& withFilter(const std::vector<unsigned>& new_filter) {
                 filter = new_filter;
                 return *this;
             }

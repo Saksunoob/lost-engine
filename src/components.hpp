@@ -12,9 +12,7 @@
 namespace engine {
     class Device;
 
-    class EntityComponents;
-
-    class Components {
+    class Entites {
         Scene &scene;
         std::vector<unsigned> filter;
 
@@ -28,16 +26,16 @@ namespace engine {
 
         public:
 
-        Components(Scene& scene) : scene(scene), filter(scene.entity_vector_length) {
+        Entites(Scene& scene) : scene(scene), filter(scene.entity_vector_length) {
             for (unsigned i = 0; i < filter.size(); i++) {
                 filter[i]=i;
             }
         };
 
-        EntityComponents operator[](unsigned index);
+        Entity operator[](unsigned index);
 
         template<typename... W>
-        Components With() {
+        Entites With() {
             for (auto it = filter.begin(); it != filter.end();) {
                 bool has = (scene.GetComponent<W>().hasEntity(*it) && ...);
                 if (!has) {
@@ -51,7 +49,7 @@ namespace engine {
         }
 
         template<typename... W>
-        Components& Without() {
+        Entites& Without() {
             for (auto it = filter.begin(); it != filter.end();) {
                 bool has = (scene.GetComponent<W>().hasEntity(*it) && ...);
                 if (has) {
@@ -65,7 +63,7 @@ namespace engine {
         }
 
         template<typename T>
-        Component<T> Get() {
+        Components<T> Get() {
             return scene.GetComponent<T>().withFilter(filter);
         }
 
@@ -75,19 +73,6 @@ namespace engine {
 
         Entity getEntity(unsigned index) {
             return {filter[index]+1, scene};
-        }
-    };
-
-    class EntityComponents {
-        Components& components;
-        unsigned entity;
-
-    public:
-        EntityComponents(Components& comps, unsigned entity) : components(comps), entity(entity) {}
-
-        template<typename T>
-        T* Get() {
-            return components.Get<T>()[entity];
         }
     };
 

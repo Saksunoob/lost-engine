@@ -10,8 +10,8 @@
 
 using namespace engine;
 
-EntityComponents Components::operator[](unsigned index) {
-    return EntityComponents(*this, index);
+Entity Entites::operator[](unsigned index) {
+    return Entity(filter[index]+1, scene);
 }
 
 glm::mat4 Transform::getTransformationMatrix() const {

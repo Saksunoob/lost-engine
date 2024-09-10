@@ -122,6 +122,6 @@ void Scene::addBundle(Entity entity, Bundle& bundle) {
     }
 }
 
-Components Scene::GetComponents() {
-    return Components(*this);
+Entites Scene::GetEntities() {
+    return Entites(*this);
 }
