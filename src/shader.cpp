@@ -44,6 +44,15 @@ namespace engine {
         }
     }
 
+    DescriptorPool::~DescriptorPool() {
+        Device& device = Engine::getDevice();
+        for (std::vector<VkDescriptorPool>& frame : pools) {
+            for (VkDescriptorPool pool : frame) {
+                vkDestroyDescriptorPool(device.device(), pool, nullptr);
+            }
+        }
+    }
+
     VkDescriptorSet DescriptorPool::writeDescriptor(VkDescriptorSetLayout set_layout, unsigned set_index, VkWriteDescriptorSet write) {
         std::vector<VkDescriptorPool>& framePools = pools[Engine::getCurrentSwapChainImage()];
 
@@ -183,14 +192,11 @@ namespace engine {
 
     Shader::~Shader() {
         VkDevice device = Engine::getDevice().device();
-        Pipeline* pipeline;
-
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSetLayout descriptorSetLayout;
 
         delete pipeline;
-        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+        if (descriptorSetLayout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+        }
     }
 
     void Shader::recreate() {

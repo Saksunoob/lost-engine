@@ -65,6 +65,7 @@ namespace engine {
         public:
 
         DescriptorPool();
+        ~DescriptorPool();
         VkDescriptorSet writeDescriptor(VkDescriptorSetLayout set_layout, unsigned set_index, VkWriteDescriptorSet write);
         void bindDescriptorSet(Pipeline& pipeline, VkDescriptorSetLayout set_layout, unsigned set_index);
     };
