@@ -12,10 +12,10 @@ void engine::Input::handleKeyEvent(SDL_Event& event) {
             keys[event.key.keysym.sym] = {false, true};
             return;
         case SDL_MOUSEBUTTONDOWN:
-            buttons[event.button.button] = {true, true};
+            buttons[event.button.button] = {true, true, IVector2(event.button.x, event.button.y), IVector2(-1, -1)};
             return;
         case SDL_MOUSEBUTTONUP:
-            buttons[event.button.button] = {false, true};
+            buttons[event.button.button] = {false, true, buttons[event.button.button].down_pos, IVector2(event.button.x, event.button.y)};
             return;
         case SDL_MOUSEWHEEL:
             scroll = IVector2(event.wheel.x, event.wheel.y);
@@ -75,6 +75,20 @@ bool engine::Input::getMouseButtonJustReleased(uint8_t button) const {
         return false;
     }
     return !buttons.at(button).pressed && buttons.at(button).justChanged;
+}
+
+engine::IVector2 engine::Input::getMouseDownPos(uint8_t button) const {
+    if (buttons.find(button) == buttons.end()) {
+        return {-1, -1};
+    }
+    return buttons.at(button).down_pos;
+}
+
+engine::IVector2 engine::Input::getMouseUpPos(uint8_t button) const {
+    if (buttons.find(button) == buttons.end()) {
+        return {-1, -1};
+    }
+    return buttons.at(button).up_pos;
 }
 
 engine::IVector2 engine::Input::getMousePos() const {

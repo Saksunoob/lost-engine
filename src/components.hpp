@@ -325,8 +325,11 @@ namespace engine {
             return {CIRCLE, Data{radius: radius}};
         }
 
-        bool collidesWithPoint(Vector2 point, Transform& transform, Vertices* = nullptr, Indices* = nullptr);
-        bool collidesWith(ColliderInfo other, Transform& transform, Vertices* = nullptr, Indices* = nullptr);
+        bool collidesWithPoint(Vector2 point, Entity entity);
+        bool collidesWith(ColliderInfo other, Entity entity);
+        bool hovering(Entity entity);
+        // Must be called every frame to work properly
+        bool clicked(uint8_t button, Entity entity);
 
         ColliderInfo getInfo(Entity entity);
     };

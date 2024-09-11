@@ -4,6 +4,7 @@
 #include "vulkan/device.hpp"
 #include "buffer.hpp"
 #include "engine.hpp"
+#include "resources.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -443,7 +444,11 @@ bool isPointInTriangle(const Vector2& A, const Vector2& B, const Vector2& C, con
     return approximatelyEqual(totalArea, areaPAB + areaPBC + areaPCA);
 }
 
-bool Collider::collidesWithPoint(Vector2 point, Transform& transform, Vertices* vertices, Indices* indices) {
+bool Collider::collidesWithPoint(Vector2 point, Entity entity) {
+    Transform transform = entity.getComponent<GlobalTransform>() ? 
+        *entity.getComponent<GlobalTransform>() : 
+        entity.getComponent<UITransform>()->getAbsoute();
+    
     switch (type) {
         case ColliderType::CIRCLE:
             return transform.position.distance(point) >= data.radius;
@@ -455,6 +460,8 @@ bool Collider::collidesWithPoint(Vector2 point, Transform& transform, Vertices* 
         case ColliderType::MESH: {
             Transform abs_transform = transform;
             Vector2 rel_point = (point - abs_transform.position).rotate(-abs_transform.rotation) / abs_transform.scale;
+            Vertices* vertices = entity.getComponent<Vertices>();
+            Indices* indices = entity.getComponent<Indices>();
             if (!vertices) {
                 Logger::logWarning("No mesh provided for Mesh collider");
                 return false;
@@ -541,8 +548,15 @@ std::vector<Polygon> Collider::ColliderInfo::getPolygons() {
     return {};
 }
 
-bool Collider::collidesWith(ColliderInfo other, Transform& transform, Vertices* vertices, Indices* indices) {
+bool Collider::collidesWith(ColliderInfo other, Entity entity) {
+    Transform transform = entity.getComponent<GlobalTransform>() ? 
+        *entity.getComponent<GlobalTransform>() : 
+        entity.getComponent<UITransform>()->getAbsoute();
+
     if (type != ColliderType::CIRCLE && other.collider.type != ColliderType::CIRCLE) {
+        Vertices* vertices = entity.getComponent<Vertices>();
+        Indices* indices = entity.getComponent<Indices>();
+
         std::vector<Polygon> polygons1 = ColliderInfo{*this, transform, vertices, indices}.getPolygons();
         std::vector<Polygon> polygons2 = other.getPolygons();
 
@@ -565,6 +579,28 @@ bool Collider::collidesWith(ColliderInfo other, Transform& transform, Vertices* 
     }
     Logger::logWarning("Unimplemented collision");
     return false;
+}
+
+bool engine::Collider::hovering(Entity entity) {
+    return collidesWithPoint(entity.scene.getResource<Input>().getUIMousePos(), entity);
+}
+
+// Must be called every frame to work properly
+bool engine::Collider::clicked(uint8_t button, Entity entity) {
+    static bool mouse_down_on_this = false;
+    Input& input = entity.scene.getResource<Input>();
+    if (input.getMouseButtonJustPressed(button)) {
+        mouse_down_on_this = hovering(entity);
+        return false;
+    }
+    if (input.getMouseButtonJustReleased(button)) {
+        if (hovering(entity) && mouse_down_on_this) {
+            mouse_down_on_this = false;
+            return true;
+        }
+        mouse_down_on_this = false;
+        return false;
+    }
 }
 
 Collider::ColliderInfo Collider::getInfo(Entity entity) {

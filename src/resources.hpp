@@ -28,9 +28,13 @@ namespace engine {
         bool justChanged;
     };
 
+    struct ButtonState : public KeyState {
+        IVector2 down_pos, up_pos;
+    };
+
     class Input {
         std::unordered_map<int, KeyState> keys;
-        std::unordered_map<uint8_t, KeyState> buttons;
+        std::unordered_map<uint8_t, ButtonState> buttons;
         IVector2 mouse_pos, mouse_delta, scroll;
         public:
         void handleKeyEvent(SDL_Event& event);
@@ -43,6 +47,8 @@ namespace engine {
         bool getMouseButton(uint8_t button) const;
         bool getMouseButtonJustPressed(uint8_t button) const;
         bool getMouseButtonJustReleased(uint8_t button) const;
+        IVector2 getMouseDownPos(uint8_t button) const;
+        IVector2 getMouseUpPos(uint8_t button) const;
 
         IVector2 getMousePos() const;
         IVector2 getUIMousePos() const;
