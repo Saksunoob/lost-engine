@@ -587,7 +587,6 @@ bool engine::Collider::hovering(Entity entity) {
 
 // Must be called every frame to work properly
 bool engine::Collider::clicked(uint8_t button, Entity entity) {
-    static bool mouse_down_on_this = false;
     Input& input = entity.scene.getResource<Input>();
     if (input.getMouseButtonJustPressed(button)) {
         mouse_down_on_this = hovering(entity);
@@ -601,6 +600,7 @@ bool engine::Collider::clicked(uint8_t button, Entity entity) {
         mouse_down_on_this = false;
         return false;
     }
+    return false;
 }
 
 Collider::ColliderInfo Collider::getInfo(Entity entity) {

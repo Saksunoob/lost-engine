@@ -318,6 +318,8 @@ namespace engine {
             std::vector<Polygon> getPolygons();
         };
 
+        Collider(ColliderType type, Data data) : type(type), data(data) {};
+
         static Collider square(AABB square) {
             return {SQUARE, Data{square: square}};
         };
@@ -332,5 +334,8 @@ namespace engine {
         bool clicked(uint8_t button, Entity entity);
 
         ColliderInfo getInfo(Entity entity);
+
+        private:
+            bool mouse_down_on_this = false;
     };
 }
