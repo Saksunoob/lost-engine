@@ -83,7 +83,7 @@ void engine::renderUVMeshes(Scene& scene) {
             return;
         }
     }
-    Entites uvMeshes = scene.GetEntities().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, Texture>();
+    Entites uvMeshes = scene.GetEntities().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, Texture>().Without<SlicedTexture>();
 
     glm::mat4 proj = cameras[main_camera]->getProjectionMatrix(validCameras.Get<GlobalTransform>()[main_camera]);
 
@@ -236,13 +236,45 @@ void engine::renderIndexedTextures(Scene& scene) {
     }
 }
 
+void engine::updateTransforms(Scene& scene) {
+    std::function<void(Entity)> update_recursively;
+
+    update_recursively = [&update_recursively](Entity entity) {
+        Transform* transform = entity.getComponent<Transform>();
+        GlobalTransform* global = entity.getComponent<GlobalTransform>();
+        GlobalTransform* parent = entity.getParent().getComponent<GlobalTransform>();
+
+        if (!transform || !global) {
+            return;
+        }
+
+        if (parent) {
+            *global = *transform * *parent;
+        } else {
+            *global = *transform;
+        }
+
+        std::vector<Entity> children = entity.getChildren();
+        for (Entity& child : children) {
+            update_recursively(child);
+        }
+    };
+
+    Entites transforms = scene.GetEntities().With<Transform, GlobalTransform>();
+    for (int i = 0; i < transforms.size(); i++) {
+        if (transforms.getEntity(i).getParent().isNull()) {
+            update_recursively(transforms[i]);
+        }
+    }
+}
+
 void engine::updateUITransforms(Scene& scene) {
     IVector2 window_size = Engine::getWindowSize();
 
     std::function<void(UITransform*, Entity)> update_recursively;
 
     update_recursively = [window_size, &update_recursively](UITransform* transform, Entity entity) {
-        transform->calculateAbsolute(window_size, entity);
+        transform->calculateGlobal(window_size, entity);
         std::vector<Entity> children = entity.getChildren();
         for (Entity& child : children) {
             UITransform* child_transform = child.getComponent<UITransform>();
@@ -257,109 +289,6 @@ void engine::updateUITransforms(Scene& scene) {
     for (int i = 0; i < transform.size(); i++) {
         if (transforms.getEntity(i).getParent().isNull()) {
             update_recursively(transform[i], transforms.getEntity(i));
-        }
-    }
-}
-void engine::renderColorUI(Scene& scene) {
-
-    const int ARRAY_SIZE = 10000;
-
-    struct Data {
-        glm::mat4 matrix[ARRAY_SIZE];
-        Color color[ARRAY_SIZE];
-    };
-    static Shader shader("shaders/ColorMesh", {{{VAR_VEC2}}}, 0, {Binding::Uniform(sizeof(Data))});
-
-    Entites colorMeshes = scene.GetEntities().With<UITransform, Vertices, Indices, Color>();
-
-    glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
-
-    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
-
-    std::unordered_map<long, std::vector<Entity>> meshes{};
-
-    for (unsigned i = 0; i < colorMeshes.size(); i++) {
-        long vertex_id = colorMeshes[i].getComponent<Vertices>()->id;
-        long index_id = colorMeshes[i].getComponent<Indices>()->id;
-        meshes[vertex_id << 32 | index_id].push_back(colorMeshes[i]);
-    }
-
-
-    shader.bind();
-    for (auto& [id, components] : meshes) {
-        int arrays = (components.size()-1)/ARRAY_SIZE+1;
-
-        for (int a = 0; a < arrays; a++) {
-            components[0].getComponent<Vertices>()->getBuffer()->bind();
-            components[0].getComponent<Indices>()->getBuffer()->bind();
-
-            Data data;
-            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
-                float z = 0;
-                if (components[a*ARRAY_SIZE+i].getComponent<ZLayer>()) {
-                    z = components[a*ARRAY_SIZE+i].getComponent<ZLayer>()->getZ();
-                }
-                data.matrix[i] = proj * components[a*ARRAY_SIZE+i].getComponent<UITransform>()->getAbsoute().getTransformationMatrix(z);
-                data.color[i] = *components[a*ARRAY_SIZE+i].getComponent<Color>();
-            }
-            shader.writeUniformBinding(0, 0, &data);
-            shader.bindSet(0);
-            
-            vkCmdDrawIndexed(cmdBuffer, components[0].getComponent<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
-        }
-    }
-}
-
-void engine::renderTextureUI(Scene& scene) {
-
-    const int ARRAY_SIZE = 10000;
-
-    struct Data {
-        glm::mat4 matrix;
-    };
-
-    static Shader shader("shaders/UVMesh", ShaderVariables({{VAR_VEC2}, {VAR_VEC2}}), 0, {Binding::Uniform(sizeof(Data)*ARRAY_SIZE), Binding::Sampler()});
-
-    Entites uvMeshes = scene.GetEntities().With<UITransform, Vertices, Indices, UVs, Texture>().Without<SlicedTexture>();
-
-    glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
-
-    VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
-
-    std::unordered_map<std::tuple<int, int, int, TextureData*, VkSampler>, std::vector<Entity>, tuple_hash<int, int, int, TextureData*, VkSampler>> meshes;
-
-    for (unsigned i = 0; i < uvMeshes.size(); i++) {
-        int vertex_id = uvMeshes[i].getComponent<Vertices>()->id;
-        int index_id = uvMeshes[i].getComponent<Indices>()->id;
-        int uv_id = uvMeshes[i].getComponent<UVs>()->id;
-        meshes[{vertex_id, index_id, uv_id, &uvMeshes[i].getComponent<Texture>()->getData(), uvMeshes[i].getComponent<Texture>()->getSampler()}].push_back(uvMeshes[i]);
-    }
-
-    shader.bind();
-    for (auto& [key, components] : meshes) {
-        int arrays = (components.size()-1)/ARRAY_SIZE+1;
-        Texture& texture = *components[0].getComponent<Texture>();
-        std::vector<engine::Buffer *> vertex_buffers = {components[0].getComponent<Vertices>()->getBuffer(), components[0].getComponent<UVs>()->getBuffer()};
-
-        for (int a = 0; a < arrays; a++) {
-            shader.bindVertexBuffers(vertex_buffers);
-            components[0].getComponent<Indices>()->getBuffer()->bind();
-
-            Data data[ARRAY_SIZE];
-            for (int i = 0; i < std::min(static_cast<int>(components.size()-a*ARRAY_SIZE),ARRAY_SIZE); i++) {
-                float z = 0;
-                if (components[a*ARRAY_SIZE+i].getComponent<ZLayer>()) {
-                    z = components[a*ARRAY_SIZE+i].getComponent<ZLayer>()->getZ();
-                }
-                data[i] = Data {
-                    proj * components[a*ARRAY_SIZE+i].getComponent<UITransform>()->getAbsoute().getTransformationMatrix(z)
-                };
-            }
-            shader.writeUniformBinding(0, 0, &data);
-            shader.writeSamplerBinding(0, 1, texture);
-            shader.bindSet(0);
-            
-            vkCmdDrawIndexed(cmdBuffer, components[0].getComponent<Indices>()->item_count, components.size()-a*ARRAY_SIZE, 0, 0, 0);
         }
     }
 }
@@ -378,13 +307,13 @@ void engine::renderSlicedTextures(Scene& scene) {
     glm::mat4 proj = Camera::getProjectionMatrix(nullptr);
 
     VkCommandBuffer cmdBuffer = Engine::getCurrentCommandBuffer();
-    Entites textures = scene.GetEntities().With<UITransform, ZLayer, Vertices, Indices, UVs, Texture, SlicedTexture>();
+    Entites textures = scene.GetEntities().With<GlobalTransform, ZLayer, Vertices, Indices, UVs, Texture, SlicedTexture>();
     shader.bind();
     for (int i = 0; i < textures.size(); i++) {
         shader.bindVertexBuffers({textures[i].getComponent<Vertices>()->getBuffer(), textures[i].getComponent<UVs>()->getBuffer()});
         textures[i].getComponent<Indices>()->getBuffer()->bind();
         Data data {
-            textures[i].getComponent<UITransform>()->getAbsoute().getTransformationMatrix(textures[i].getComponent<ZLayer>()->getZ()),
+            textures[i].getComponent<GlobalTransform>()->getTransformationMatrix(textures[i].getComponent<ZLayer>()->getZ()),
             proj,
             textures[i].getComponent<SlicedTexture>()->pixel_size,
             textures[i].getComponent<Texture>()->getSize(),

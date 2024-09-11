@@ -84,10 +84,15 @@ namespace engine {
 
         glm::mat4 getTransformationMatrix() const;
         glm::mat4 getTransformationMatrix(float z) const;
+
+        Transform operator*(const Transform& other) const;
     };
 
     struct GlobalTransform : Transform {
         GlobalTransform(Vector2 position, Vector2 scale, double rotation): Transform(position, scale, rotation) {};
+        GlobalTransform(Transform transform) : Transform(transform) {};
+
+        void operator=(const Transform& other);
     };
 
     /// Determines entity's depth value. Lower is rendered on top.
@@ -281,14 +286,9 @@ namespace engine {
         UITransform(Point origin, Point anchor, UnitType position_type, Vector2 position, UnitType size_type, Vector2 size, float rotation) : 
             origin(origin), anchor(anchor),
             position_type(position_type), size_type(size_type),
-            position(position), size(size), rotation(rotation), 
-            absolute(position, size, rotation) {};
+            position(position), size(size), rotation(rotation) {};
 
-        Transform getAbsoute();
-        void calculateAbsolute(IVector2 window_size, Entity entity);
-
-        private:
-            Transform absolute;
+        void calculateGlobal(IVector2 window_size, Entity entity);
     };
 
     struct SlicedTexture {

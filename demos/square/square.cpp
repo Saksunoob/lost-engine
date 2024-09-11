@@ -12,8 +12,7 @@ int main() {
     camera.addComponent(GlobalTransform(Vector2(0, 0), Vector2(1, 1), 0));
 
     Entity texture = main_scene.createEntity();
-    texture.addComponent(UITransform(Point::center(), Point::center(), UNIT_PIXELS, {0, 0}, UNIT_PERCENT, {50, 50}, 0));
-    texture.addComponent(ZLayer(0, 0.1));
+    texture.addBundle(Bundles::UITransformBundle(UITransform(Point::center(), Point::center(), UNIT_PIXELS, {0, 0}, UNIT_PERCENT, {50, 50}, 0)));
     texture.addBundle(Bundles::quadMeshBundle());
     texture.addComponent(Texture("../src/textures/test.png", Texture::Filter::NEAREST, Texture::AddressMode::CLAMP_TO_EDGE));
     texture.addComponent(SlicedTexture({{64, 64, 64, 64}}, IVector2(1, 1)));

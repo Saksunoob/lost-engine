@@ -6,7 +6,7 @@
 namespace engine {
     class Bundles {
         public:
-        static Bundle& quadMeshBundle() {
+        static Bundle quadMeshBundle() {
             static Vertices vertices({
                 {0.5, 0.5},
                 {-0.5, -0.5},
@@ -25,6 +25,14 @@ namespace engine {
 
             static Bundle quad_mesh_bundle(vertices, indices, uvs);
             return quad_mesh_bundle;
+        }
+
+        static Bundle transformBundle(Transform transform, ZLayer z = {1, 0}) {
+            return Bundle{transform, GlobalTransform(transform), z};
+        }
+
+        static Bundle UITransformBundle(UITransform transform, ZLayer z = {0, 0}) {
+            return Bundle{transform, GlobalTransform({}, {}, 0), z};
         }
     };
 }

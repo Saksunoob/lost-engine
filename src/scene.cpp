@@ -13,7 +13,7 @@ std::vector<Entity> Entity::getChildren() {
     return scene.getChildren(*this);
 }
 
-void Entity::addBundle(Bundle& bundle) {
+void Entity::addBundle(Bundle bundle) {
     scene.addBundle(*this, bundle);
 };
 
@@ -112,7 +112,7 @@ std::vector<Entity> Scene::getChildren(Entity entity) {
     return children;
 }
 
-void Scene::addBundle(Entity entity, Bundle& bundle) {
+void Scene::addBundle(Entity entity, Bundle bundle) {
     for (auto& [type, component] : bundle.components) {
         if (component_mapping.find(type) == component_mapping.end()) {
             components.push_back(std::vector<std::unique_ptr<std::any>>(entity_vector_length));

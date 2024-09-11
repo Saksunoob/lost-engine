@@ -33,6 +33,22 @@ glm::mat4 Transform::getTransformationMatrix(float z) const {
     return matrix;
 }
 
+Transform Transform::operator*(const Transform& other) const {
+    Transform trans{Vector2{}, Vector2{}, 0};
+
+    trans.position = other.position + (position * other.scale).rotate(other.rotation);
+    trans.scale = scale * other.scale;
+    trans.rotation = rotation + other.rotation;
+
+    return trans;
+}
+
+void GlobalTransform::operator=(const Transform& other) {
+    position = other.position;
+    scale = other.scale;
+    rotation = other.rotation;
+}
+
 int ZLayer::min_layer = 0;
 int ZLayer::max_layer = 0;
 
@@ -350,24 +366,26 @@ void TileMap::setTile(IVector2 pos, int value) {
     tiles.at(pos.y*size.x+pos.x) = value;
 }
 
-void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
+void UITransform::calculateGlobal(IVector2 window_size, Entity entity) {
     Transform root({0, 0}, {0, 0}, 0);
-    UITransform* parent = entity.getParent().getComponent<UITransform>();
-    if (parent != nullptr) {
-        root = parent->absolute;
+    Entity parent = entity.getParent();
+    if (!parent.isNull()) {
+        root = *parent.getComponent<GlobalTransform>();
     } else {
         root.scale = Vector2(window_size.x, window_size.y);
     }
 
+    GlobalTransform& global = *entity.getComponent<GlobalTransform>();
+
     switch (size_type) {
         case UNIT_PERCENT:
-            absolute.scale = root.scale * (size/100.);
+            global.scale = root.scale * (size/100.);
             break;
         case UNIT_PIXELS:
-            absolute.scale = size;
+            global.scale = size;
     }
 
-    absolute.rotation = root.rotation + rotation;
+    global.rotation = root.rotation + rotation;
 
     Vector2 anchor_mod{0, 0};
 
@@ -393,35 +411,31 @@ void UITransform::calculateAbsolute(IVector2 window_size, Entity entity) {
     Vector2 origin_mod{0, 0};
     switch (origin.horizontal) {
         case POINT_LEFT:
-            origin_mod.x += absolute.scale.x/2.;
+            origin_mod.x += global.scale.x/2.;
             break;
         case POINT_RIGHT:
-            origin_mod.x -= absolute.scale.x/2.;
+            origin_mod.x -= global.scale.x/2.;
             break;
     }
     switch (origin.vertical) {
         case POINT_TOP:
-            origin_mod.y += absolute.scale.y/2.;
+            origin_mod.y += global.scale.y/2.;
             break;
         case POINT_BOTTOM:
-            origin_mod.y -= absolute.scale.y/2.;
+            origin_mod.y -= global.scale.y/2.;
             break;
     }
 
-    root.position = root.position + origin_mod.rotate(absolute.rotation);
+    root.position = root.position + origin_mod.rotate(global.rotation);
 
     switch (position_type) {
         case UNIT_PERCENT:
-            absolute.position = root.position + (position/100*root.scale).rotate(root.rotation);
+            global.position = root.position + (position/100*root.scale).rotate(root.rotation);
             break;
         case UNIT_PIXELS:
-            absolute.position = root.position + position.rotate(root.rotation);
+            global.position = root.position + position.rotate(root.rotation);
             break;
     }
-}
-
-Transform UITransform::getAbsoute() {
-    return absolute;
 }
 
 float area(const Vector2& A, const Vector2& B, const Vector2& C) {
@@ -445,9 +459,7 @@ bool isPointInTriangle(const Vector2& A, const Vector2& B, const Vector2& C, con
 }
 
 bool Collider::collidesWithPoint(Vector2 point, Entity entity) {
-    Transform transform = entity.getComponent<GlobalTransform>() ? 
-        *entity.getComponent<GlobalTransform>() : 
-        entity.getComponent<UITransform>()->getAbsoute();
+    Transform& transform = *entity.getComponent<GlobalTransform>();
     
     switch (type) {
         case ColliderType::CIRCLE:
@@ -549,9 +561,7 @@ std::vector<Polygon> Collider::ColliderInfo::getPolygons() {
 }
 
 bool Collider::collidesWith(ColliderInfo other, Entity entity) {
-    Transform transform = entity.getComponent<GlobalTransform>() ? 
-        *entity.getComponent<GlobalTransform>() : 
-        entity.getComponent<UITransform>()->getAbsoute();
+    Transform& transform = *entity.getComponent<GlobalTransform>();
 
     if (type != ColliderType::CIRCLE && other.collider.type != ColliderType::CIRCLE) {
         Vertices* vertices = entity.getComponent<Vertices>();
@@ -604,9 +614,7 @@ bool engine::Collider::clicked(uint8_t button, Entity entity) {
 }
 
 Collider::ColliderInfo Collider::getInfo(Entity entity) {
-    Transform transform = entity.getComponent<GlobalTransform>() ? 
-        *entity.getComponent<GlobalTransform>() : 
-        transform = entity.getComponent<UITransform>()->getAbsoute();
+    Transform& transform = *entity.getComponent<GlobalTransform>();
     return ColliderInfo {
         collider: *this,
         transform: transform,

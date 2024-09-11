@@ -12,9 +12,8 @@ namespace engine {
     void renderUVMeshes(Scene& scene);
     void renderTileMaps(Scene& scene);
     void renderIndexedTextures(Scene& scene);
+    void updateTransforms(Scene& scene);
     void updateUITransforms(Scene& scene);
-    void renderColorUI(Scene& scene);
-    void renderTextureUI(Scene& scene);
     void renderSlicedTextures(Scene& scene);
     void timeSystem(Scene& scene);
     void pollSDLEvents(Scene& scene);
@@ -25,6 +24,7 @@ namespace engine {
     };
 
     static const std::vector<Stage::System> DEFAULT_UPDATE_SYSTEMS = {
+        updateTransforms,
         updateUITransforms
     };
 
@@ -33,8 +33,6 @@ namespace engine {
         renderUVMeshes,
         renderTileMaps,
         renderIndexedTextures,
-        renderColorUI,
-        renderTextureUI,
         renderSlicedTextures
     };
 }

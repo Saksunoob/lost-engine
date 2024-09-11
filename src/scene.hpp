@@ -24,7 +24,7 @@ namespace engine {
         C& addComponent(C component);
         template <typename C>
         C* getComponent();
-        void addBundle(Bundle& bundle);
+        void addBundle(Bundle bundle);
 
         void addChild(Entity child);
         Entity getParent();
@@ -90,7 +90,7 @@ namespace engine {
                 return *std::any_cast<C>(components[component_mapping[type]][entity].get());
             }
 
-            void addBundle(Entity entity, Bundle& bundle);
+            void addBundle(Entity entity, Bundle bundle);
             
             template<typename C>
             Components<C> GetComponent() {
