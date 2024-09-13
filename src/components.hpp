@@ -124,7 +124,7 @@ namespace engine {
         B* getBuffer() {return buffer.get();}
         const std::vector<T>& getData() { return *data.get(); }
 
-        private:
+        protected:
             static int id_counter;
             std::shared_ptr<std::vector<T>> data;
             std::shared_ptr<B> buffer = nullptr;
@@ -133,12 +133,14 @@ namespace engine {
     template<typename B, typename T>
     int RenderData<B, T>::id_counter = 0;
 
-    struct Vertices : public RenderData<VertexBuffer, Vector2> {
-        Vertices(std::vector<Vector2> vertices) : RenderData(vertices) {};
-    };
-
     struct Indices : public RenderData<IndexBuffer, unsigned> {
         Indices(std::vector<unsigned> indices) : RenderData(indices) {};
+    };
+
+    struct Vertices : public RenderData<VertexBuffer, Vector2> {
+        Vertices(std::vector<Vector2> vertices) : RenderData(vertices) {};
+
+        Polygon getPolygon(Indices* indices);
     };
 
     struct UVs : public RenderData<VertexBuffer, Vector2> {
@@ -309,16 +311,28 @@ namespace engine {
             float radius;
         } data;
 
+        OBB bounding_box;
+
         struct ColliderInfo {
             Collider& collider;
             Transform transform;
+            OBB bounding_box;
             Vertices* vertices;
             Indices* indices;
 
             std::vector<Polygon> getPolygons();
         };
 
-        Collider(ColliderType type, Data data) : type(type), data(data) {};
+        Collider(ColliderType type, Data data) : type(type), data(data) {
+            switch (type) {
+                case ColliderType::SQUARE:
+                    bounding_box = OBB(data.square);
+                    break;
+                case ColliderType::CIRCLE:
+                    bounding_box = OBB(Vector2{0, 0}, Vector2(2*data.radius, 2*data.radius), 0.);
+                    break;
+            }
+        };
 
         static Collider square(AABB square) {
             return {SQUARE, Data{square: square}};
@@ -336,6 +350,7 @@ namespace engine {
         ColliderInfo getInfo(Entity entity);
 
         private:
+            bool boundingBoxesCollide(OBB first, OBB second);
             bool mouse_down_on_this = false;
     };
 }

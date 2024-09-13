@@ -80,6 +80,26 @@ float ZLayer::getZ() {
     return rel_layer*layer_width+order*layer_width;
 }
 
+Polygon Vertices::getPolygon(Indices* indices) {
+    std::vector<Vector2> points;
+    const std::vector<Vector2>& vertices = getData();
+    if (indices) {
+        points.reserve(indices->item_count);
+        const std::vector<unsigned>& i_vec = indices->getData();
+
+        for (int i = 0; i<indices->item_count; i++) {
+            points[i] = vertices[i_vec[i]];
+        }
+    } else {
+        points.reserve(item_count);
+
+        for (int i = 0; i<item_count; i++) {
+            points[i] = vertices[i];
+        }
+    }
+    return Polygon(points);
+}
+
 glm::mat4 Camera::getProjectionMatrix(const Transform* transform) {
     IVector2 window_size = Engine::getWindowSize();
     glm::mat4 matrix(1.0);
@@ -499,44 +519,6 @@ bool Collider::collidesWithPoint(Vector2 point, Entity entity) {
     return false;
 }
 
-std::vector<Vector2> getAxes(Polygon poly) {
-    std::vector<Vector2> axes(poly.points.size());
-    for (int i = 0; i < poly.points.size(); i++) {
-        Vector2 edge = poly.points[i] - poly.points[(i+1)%poly.points.size()];
-        Vector2 normal = edge.normal();
-        axes[i] = (normal / normal.magnitude());
-    }
-    return axes;
-}
-
-std::array<float, 2> project(Polygon poly, Vector2 axis) {
-    float dot = poly.points[0].dot(axis);
-    float min = dot;
-    float max = dot;
-    for (int i = 1; i < poly.points.size(); i++) {
-        float dot = poly.points[i].dot(axis);
-        min = std::min(min, dot);
-        max = std::max(max, dot);
-    }
-    return {min, max};
-}
-
-bool polygonsCollide(Polygon poly1, Polygon poly2) {
-    std::vector<Vector2> axes = getAxes(poly1);
-    std::vector<Vector2> axes2 = getAxes(poly2);
-    axes.insert(axes.end(), axes2.begin(), axes2.end());
-
-    for (Vector2 axis : axes) {
-        std::array<float, 2> proj1 = project(poly1, axis);
-        std::array<float, 2> proj2 = project(poly2, axis);
-
-        if (proj1[1] < proj2[0] || proj2[1] < proj1[0]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 std::vector<Polygon> Collider::ColliderInfo::getPolygons() {
     if (collider.type == ColliderType::SQUARE) {
         return {{collider.data.square.getPolygon().transformed(transform)}};
@@ -563,16 +545,24 @@ std::vector<Polygon> Collider::ColliderInfo::getPolygons() {
 bool Collider::collidesWith(ColliderInfo other, Entity entity) {
     Transform& transform = *entity.getComponent<GlobalTransform>();
 
+    if (type == ColliderType::MESH) {
+        bounding_box = *entity.getComponent<OBB>();
+    }
+
+    if (!bounding_box.transformed(transform).overlaps(other.bounding_box.transformed(other.transform))) {
+        return false;
+    }
+
     if (type != ColliderType::CIRCLE && other.collider.type != ColliderType::CIRCLE) {
         Vertices* vertices = entity.getComponent<Vertices>();
         Indices* indices = entity.getComponent<Indices>();
 
-        std::vector<Polygon> polygons1 = ColliderInfo{*this, transform, vertices, indices}.getPolygons();
+        std::vector<Polygon> polygons1 = ColliderInfo{*this, transform, bounding_box, vertices, indices}.getPolygons();
         std::vector<Polygon> polygons2 = other.getPolygons();
 
         for (Polygon& p1 : polygons1) {
             for (Polygon& p2 : polygons2) {
-                if (polygonsCollide(p1, p2)) {
+                if (p1.overlaps(p2)) {
                     return true;
                 }
             }
@@ -615,9 +605,14 @@ bool engine::Collider::clicked(uint8_t button, Entity entity) {
 
 Collider::ColliderInfo Collider::getInfo(Entity entity) {
     Transform& transform = *entity.getComponent<GlobalTransform>();
+    if (type == ColliderType::MESH) {
+        bounding_box = *entity.getComponent<OBB>();
+    }
+
     return ColliderInfo {
         collider: *this,
         transform: transform,
+        bounding_box: bounding_box,
         vertices: entity.getComponent<Vertices>(),
         indices: entity.getComponent<Indices>()
     };

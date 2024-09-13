@@ -13,7 +13,7 @@ namespace engine {
         Vector2(IVector2 vec);
         Vector2(float x, float y) : x(x), y(y) {};
 
-        Vector2 normal() {
+        Vector2 normal() const {
             return Vector2(-y, x);
         }
 
@@ -25,8 +25,12 @@ namespace engine {
             return operator-(other).magnitude();
         }
 
-        float dot(Vector2 other) {
+        float dot(Vector2 other) const {
             return x*other.x+y*other.y;
+        }
+
+        float cross(Vector2 other) const {
+            return x*other.x - y*other.y;
         }
 
         Vector2 operator+(Vector2 other) const {
@@ -47,7 +51,7 @@ namespace engine {
         Vector2 operator*(float other) const {
             return Vector2(x*other,y*other);
         }
-        Vector2 operator*(Transform& transform) const;
+        Vector2 operator*(const Transform& transform) const;
         Vector2 operator/(float other) const {
             return Vector2(x/other,y/other);
         }
@@ -99,10 +103,18 @@ namespace engine {
         Color(float brightness) : r(brightness), g(brightness), b(brightness), a(1.0) {};
     };
 
+    struct OBB;
+
     struct Polygon {
         std::vector<Vector2> points;
 
-        Polygon transformed(Transform& transform);
+        Polygon transformed(const Transform& transform) const;
+
+        std::vector<Vector2> getAxes() const;
+        std::array<float, 2> project(Vector2 axis) const;
+        bool overlaps(const Polygon& other) const;
+        Polygon getHull() const;
+        OBB getOBB() const;
     };
 
     struct AABB {
@@ -120,6 +132,18 @@ namespace engine {
         Polygon getPolygon() {
             return {{minp, {minp.x, maxp.y}, maxp, {maxp.x, minp.y}}};
         }
+    };
+
+    struct OBB : public Polygon {
+        OBB(Vector2 center, Vector2 size, double rotation) : Polygon{std::vector<Vector2>(4)} {
+            Vector2 halfsize = size/2.;
+            points[0] = (center-halfsize).rotate(rotation);
+            points[1] = (center+Vector2(halfsize.x, -halfsize.y)).rotate(rotation);
+            points[2] = (center+halfsize).rotate(rotation);
+            points[3] = (center+Vector2(-halfsize.x, halfsize.y)).rotate(rotation);
+        }
+        OBB(AABB rect) : Polygon{rect.getPolygon()} {}
+        OBB() {};
     };
 
     struct PerlinNoise {
